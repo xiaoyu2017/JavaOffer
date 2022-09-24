@@ -1,3 +1,4 @@
+[TOC]
 # 多线程
 
 ## sleep和wait区别
@@ -228,6 +229,7 @@ Servlet：不是线程安全
 是被new这个线程类的当前线程调用，run方法才是被创建线程调用。
 
 ## 线程间通信
+
 实现：
 - 使用wait、notify、notifyAll
 - 使用Condition进行线程通信
