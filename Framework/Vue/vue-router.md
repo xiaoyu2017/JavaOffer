@@ -4,22 +4,23 @@ vue 的一个插件库，专门用来实现 SPA 应用。
 # 基本使用
 
 创建路由js文件（文件路径router/index.js）
+
 ```js
 // 该文件专门用于创建整个应用的路由器
-import VueRouter from 'vue-router'
+import VueRouter from 'Framework/Vue/vue-router'
 //引入组件
 import Home from "@/components/router/Home";
 import About from "@/components/router/About";
 //创建并暴露一个路由器
 export default new VueRouter({
-    routes:[
+    routes: [
         {
-            path:'/about',
-            component:About
+            path: '/about',
+            component: About
         },
         {
-            path:'/home',
-            component:Home
+            path: '/home',
+            component: Home
         }
     ]
 })
