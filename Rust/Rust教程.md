@@ -653,13 +653,250 @@ _**总结：**_
 
 > 引用类似判断传递的参数是值还是引用（这里的引用是java语言中的），对与可变引用的限制，很类似锁机制。不可变引用类似乐观锁，可变引用类似悲观锁。此部分仅为个人理解。
 
+## 5.5 字符串slice
+
+便于理解，我们实现一个简单的需求：找出一段话中第一个单词，就一个单词直接返回。（单词结束位置下标）
+
+```rust
+fn main() {
+    let s = String::from("This is test");
+    let result = first_word(&s);
+}
+
+fn first_word(str: &String) -> usize {
+    let bytes = str.as_bytes();
+    for (i, &item) in bytes.iter().enumerate() {
+        if item == b' '{
+            return i;
+        }
+    };
+    str.len()
+}
+```
+
+但是现在在first_word函数执行结束后将s变量清理，这就会导致result变量的存在毫无意义，毕竟他是以变量s作为参考的。
+
+```rust
+fn main() {
+    let mut s = String::from("This is test");
+
+    let result = first_word(&s);
+
+    s.clear();// 逻辑上是存在问题的，但是编译是可以通过的
+}
+
+fn first_word(str: &String) -> usize {
+    let bytes = str.as_bytes();
+    for (i, &item) in bytes.iter().enumerate() {
+        if item == b' '{
+            return i;
+        }
+    };
+    str.len()
+}
+```
 
 
+有没有一种方法可以直接获得内容，但是不依赖原数据了，rust解决方案是新增一个字符串类型**字符串slice**，表示类型使用 **`&str`**。
+使用slice类型对代码进行修改：
+```rust
+fn main() {
+    let mut s = String::from("This is test");
+    let result = first_word(&s);
+    println!("result:{}", result);
+}
 
+fn first_word(str: &String) -> &str {
+    let len = str.len();
+    let bytes = str.as_bytes();
+    for (i, &item) in bytes.iter().enumerate() {
+        if item == b' ' {
+            return &str[..i];
+        }
+    };
+    &str[..len]
+}
+```
 
+在rust中字面量字符串类型就是&str，所有在这里就可以对以上代码进行修改：
 
+```rust
+fn main() {
+    let result = first_word("This is test");
+    println!("result:{}", result);
+}
 
+fn first_word(str_temp: &str) -> &str {
+    let len = str_temp.len();
+    let bytes = str_temp.as_bytes();
+    for (i, &item) in bytes.iter().enumerate() {
+        if item == b' ' {
+            return &str_temp[..i];
+        }
+    };
+    &str_temp[..len]
+}
 
+```
+
+其他类型的slice。
+
+数组slice：
+```rust
+fn main() {
+    let x = [1, 2, 3, 4, 5];
+    let y = &x[..3];
+    println!("{},{}", y[0], y[1]);
+}
+```
+
+# 6. 结构体
+
+结构体类似元组，但是不同的是，元组只能通过下标设置值，结构体可以通过属性名称获得或者设置值。
+
+1. 创建使用结构体
+
+定义使用结构体：
+```rust
+struct User {
+    name: String,
+    active: bool,
+    email: String,
+    age: u8,
+}
+
+fn main() {
+    let user = User {
+        name: String::from("Fish"),
+        email: String::from("fish@email.com"),
+        active: true,
+        age: 18,
+    };
+    println!("{}", user.name);
+}
+```
+
+通过少量的修改来创建一个新的结构体实例，其他属性的值不变。以往这是一个繁琐和无意义的步骤，在rust中可以通过结构体更新语法实现。
+
+结构体更新语法：
+```rust
+struct User {
+    name: String,
+    active: bool,
+    email: String,
+    age: u8,
+}
+
+fn main() {
+    let user1 = User {
+        name: String::from("Fish"),
+        email: String::from("fish@email.com"),
+        active: true,
+        age: 18,
+    };
+
+    // 以往的写法
+    // let user2 = User {
+    //     name: String::from("yuhuai"),
+    //     email: user1.email,
+    //     active: user1.active,
+    //     age: user1.age
+    // };
+
+    let user2 = User {
+        name: String::from("yuhuai"),
+        // 结构体更新语法
+        ..user1
+    };
+
+    // 编译报错，遵循所有权。email被移动
+    // println!("user1 name:{}, email:{}", user1.name, user1.email);
+    // println!("user2 name:{}, email:{}", user2.name, user2.email);
+
+    // 正常编译运行
+    println!("user1 name:{}, active:{}", user1.name, user1.active);
+    println!("user2 name:{}, active:{}", user2.name, user2.active);
+}
+```
+
+从上面示例可以看出，结构体更新语法的使用`..user1`，需要注意的是，必须要放在最后一行。表示未显示赋值的属性与user1中的属性相同。
+
+结构体更新语法使用的也是=赋值，所以所有权规则在结构体中也是适用的，email属性值就被移动到user2中，其他类型是Copy特性类型所有为克隆并未移动。
+
+2. 没有属性名称的结构体：**元组结构体**
+
+顾名思义这是一个元组结构体。
+```rust
+struct Color(i32,i32,i32);
+
+fn main() {
+    let black = Color(0, 0, 0);
+    println!("{}", black.0);
+}
+```
+
+3. 没有任何属性的结构体：**类单元结构体**
+
+这很类似元组中的单元元组，内部无任何值。
+
+```rust
+struct Tag;
+
+fn main() {
+    let tag = Tag;
+}
+```
+
+4. 结构体实例，计算长方形面积
+
+```rust
+struct Rectangle {
+    length: u32,
+    height: u32,
+}
+
+fn main() {
+    let r1 = Rectangle {
+        length: 100,
+        height: 40,
+    };
+
+    let area = area(&r1);
+
+    println!("length:{}, height:{}, area:{}", r1.length, r1.height, area)
+}
+
+fn area(r: &Rectangle) -> u32 {
+    r.length * r.height
+}
+```
+
+以上示例就是结构体的使用，但是有几个技巧需要添加，可进一步优化代码，比如结构体实例内容显示不能直接显示。需要添加一些标识才可。
+
+```rust
+#[derive(Debug)]
+struct Rectangle {
+    length: u32,
+    height: u32,
+}
+
+fn main() {
+    let r1 = Rectangle {
+        length: 100,
+        height: 40,
+    };
+
+    let area = area(&r1);
+
+    dbg!("{:?}, area:{}", r1, area);
+}
+
+fn area(r: &Rectangle) -> u32 {
+    r.length * r.height
+}
+```
+
+结构体上添加`#[derive(Debug)]`,然后在打印宏中使用`{:?}`或者`{:#?}`来显示。
 
 
 
