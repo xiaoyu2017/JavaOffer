@@ -754,7 +754,7 @@ fn main() {
 
 结构体类似元组，但是不同的是，元组只能通过下标设置值，结构体可以通过属性名称获得或者设置值。
 
-1. 创建使用结构体
+## 6.1 创建使用结构体
 
 定义使用结构体：
 ```rust
@@ -823,7 +823,7 @@ fn main() {
 
 结构体更新语法使用的也是=赋值，所以所有权规则在结构体中也是适用的，email属性值就被移动到user2中，其他类型是Copy特性类型所有为克隆并未移动。
 
-2. 没有属性名称的结构体：**元组结构体**
+## 6.2 没有属性名称的结构体：**元组结构体**
 
 顾名思义这是一个元组结构体。
 ```rust
@@ -835,7 +835,7 @@ fn main() {
 }
 ```
 
-3. 没有任何属性的结构体：**类单元结构体**
+## 6.3 没有任何属性的结构体：**类单元结构体**
 
 这很类似元组中的单元元组，内部无任何值。
 
@@ -897,6 +897,198 @@ fn area(r: &Rectangle) -> u32 {
 ```
 
 结构体上添加`#[derive(Debug)]`,然后在打印宏中使用`{:?}`或者`{:#?}`来显示。
+
+## 6.4 方法
+
+方法类似函数，只不过定义在impl代码块中，将它指向某个结构体。（很类似java中的类方法）
+
+将计算面积方法放在结构体重：
+```rust
+#[derive(Debug)]
+struct Rectangle {
+    length: u32,
+    height: u32,
+}
+
+impl Rectangle {
+    fn area(&self) -> u32 {
+        self.length * self.height
+    }
+}
+
+fn main() {
+    let r1 = Rectangle {
+        length: 100,
+        height: 40,
+    };
+
+    let area = r1.area();
+
+    println!("{:?}, area:{}", r1, area);
+}
+```
+
+这看上去和直接创建一个函数没什么大的区别，但是在理解上或阅读上是比较优雅的，并且这里会有一个隐藏参数即实例本身`&self`，调用方法时可以不用传参。
+
+**关联函数**：同方法一样，只不过方法第一个参数不是self（类似java中的静态方法，属于类，关联函数也是）。
+
+```rust
+#[derive(Debug)]
+struct Rectangle {
+    length: u32,
+    height: u32,
+}
+
+impl Rectangle {
+    fn area(&self) -> u32 {
+        self.length * self.height
+    }
+}
+
+impl Rectangle {
+    fn new(l: u32, h: u32) -> Self {
+        Self {
+            length: l,
+            height: h,
+        }
+    }
+}
+
+fn main() {
+    let r1 = Rectangle::new(100,30);
+
+    let area = r1.area();
+
+    println!("{:?}, area:{}", r1, area);
+}
+```
+
+以上示例看上去更像面向对象编程了，可以看到调用关联函数使用`::`。
+
+**可以使用多个`impl`块，Self类型表示当前结构体类型。**
+
+# 7. 枚举和匹配模式
+
+## 7.1 枚举
+
+1. 定义枚举
+
+枚举类似结构体定义，关键字使用`enum`，调用使用`::`。
+
+```rust
+enum IpProtocol{
+    IPv4,
+    IPv6
+}
+
+fn main() {
+    let ipv4 = IpProtocol::IPv4;
+}
+```
+
+较为复杂的枚举：
+```rust
+#[derive(Debug)]
+enum Message {
+    Tag,
+    Writer(String),
+    Color(i32, i32, i32),
+    Test {
+        x: u32,
+        y: u32,
+    },
+}
+
+impl Message {
+    fn call(&self) {
+        println!("{:?}", self)
+    }
+}
+
+fn main() {
+    let e = Message::Test { x: 10, y: 3 };
+    e.call();
+}
+```
+
+在定义枚举中，它的内部属性：
+- `Tag`：单元结构体
+- `Writer(String)`：元组结构体
+- `Color(i32, i32, i32),`：元组结构体
+- `Test {...}`：结构体
+
+2. Option枚举
+
+这是一个基础库提供的枚举，主要是用于解决空值问题。在其他语言中可能会出现null来表示空值，但是空值的变量使用很容易超出预期。所有Rust中并没有null，取而代之的是Option枚举。
+
+```rust
+enum Option<T> {
+    None,
+    Some(T),
+}
+```
+
+## 7.2 match 控制流程
+
+这是通过匹配来控制流程的语法，可以它获得枚举中的值。
+
+```rust
+#[derive(Debug)]
+enum Sex {
+    Male(u8),
+    Female(u8),
+}
+
+#[derive(Debug)]
+struct People {
+    age: u8,
+    sex: String,
+}
+
+fn main() {
+    let sex = Sex::Male(18);
+    let p = match sex {
+        Sex::Male(i) => People { age: i, sex: String::from("male") },
+        Sex::Female(i) => {
+            People { age: i, sex: String::from("female") }
+        }
+    };
+
+    println!("{:?}", p)
+}
+```
+
+**match使用规则**：
+- match匹配是穷举的，所有要保证例出所有情况，也可以使用`other`或`_`来表示其他所有情况，**必须放在最后面**。
+  - other：表示匹配其他所有情况，同时还需要使用这个值
+  - _：表示匹配其他所有情况，但是不使用被匹配到的值（其他情况不作任何处理`_ => ()`）
+
+## 7.3 if let 控制流程
+
+当我们只关注匹配中的一个结果其他的不在意，这时在使用match就会显得代码很冗余。这时可以使用`if let`或`if let else`。可以把`if let`看成match的语法糖。
+
+```rust
+fn main() {
+    let age = Some(5);
+    if let Some(i) = age {
+        println!("age:{}", i);
+    } else {
+        println!("未能获得年龄");
+    }
+}
+```
+
+从上面可以看出，else类似_或other匹配其他所有情况。if let会导致match**穷尽性检测被破坏**，所以使用if let需要在**简洁和穷尽**之间做出选择。
+
+# 8. 包、Crate和模块
+
+
+
+
+
+
+
+
 
 
 
