@@ -195,10 +195,10 @@ fn main() {
 **_不带任何值的元组：单元元组_**
 这种值一般写为()，通常用于返回空值或空的类型。
 
-
 2. 数组：元数类型相同，长度固定不可变
 
 数组定义与使用如下：
+
 ```rust
 fn main() {
     // 给定值
@@ -223,17 +223,16 @@ fn main() {
 main是程序的入口，然后通过main函数调用其他函数。
 
 ```rust
-fn main(){
+fn main() {
     println!("main run");
-    
+
     a_function();
 }
 
-fn a_function(){
+fn a_function() {
     println!("a_function run")
 }
 ```
-
 
 2. 参数
 
@@ -252,8 +251,7 @@ fn temp(x: f64, y: f64) {
 
 3. 语句和表达式
 
-在rust中语句和表达式是有严格界限的，语句是没有返回值，表达式是有返回值的。例如`let x = 5;`这就是语句，而`x + y`是表达式。这样就与其他语言有了
-不同，例如`x = y = 5` 在rust中是不成立的。
+在rust中语句和表达式是有严格界限的，语句是没有返回值，表达式是有返回值的。例如`let x = 5;`这就是语句，而`x + y`是表达式。这样就与其他语言有了 不同，例如`x = y = 5` 在rust中是不成立的。
 
 常量、函数、代码块（{}大括号括起来的部分）、宏调用这些都是表达式（可以有返回值）。
 
@@ -279,14 +277,15 @@ fn add(x: i32, y: i32) -> i32 {
 单行注释：`//这是一行注释`
 
 ## 4.5 控制流
+
 1. if条件判断
 
 ```rust
-fn main(){
+fn main() {
     let num = 10;
-    if num < 100{
+    if num < 100 {
         println!("num < 100");
-    }else{
+    } else {
         println!("num > 100");
     }
 }
@@ -308,8 +307,8 @@ fn main() {
 loop:无限循环下去，可以通过continue或者break跳过或跳出循环
 
 ```rust
-fn main(){
-    loop{
+fn main() {
+    loop {
         println!("ABCDEFGHIJKLMN");
     }
 }
@@ -358,7 +357,7 @@ fn main() {
 while：判断是否符合条件，符合运行否则就结束,也可以使用continue和break跳出循环。也可以通过loop、if、else、break等来实现。
 
 ```rust
-fn main(){
+fn main() {
     let mut x = 0;
     while x < 10 {
         println!("while is run ...");
@@ -371,7 +370,7 @@ fn main(){
 for：使用for来遍历集合。
 
 ```rust
-fn main(){
+fn main() {
     let a = [1, 2, 3, 4, 5, 6];
     for item in a {
         println!("show array num: {}", item);
@@ -381,9 +380,10 @@ fn main(){
 ```
 
 指定下标显示集合内容
+
 ```rust
-fn main(){
-    for item in 0..6{
+fn main() {
+    for item in 0..6 {
         println!("num: {}", item);
     }
 }
@@ -396,13 +396,15 @@ Rust中最为与众不同的特性，这使得Rust在不使用垃圾回收机制
 ## 5.1 什么是所有权
 
 所有权规则：
+
 - rust中任何一个值都有一个所有者。
 - 值在任一时刻只有一个所有者。
 - 当所有者离开作用域，值将会被丢弃。
 
 值作用域：即一个值在程序中有效的范围
+
 ```rust
-fn main(){ // 值x是无效的，未声明 
+fn main() { // 值x是无效的，未声明 
     let x = 1; // 此时x值有效
 }// 作用域结束，值无效
 ```
@@ -454,6 +456,7 @@ fn main() {
 以上就会与第一种移动示例冲突，但是深入了解就会发现其底层拷贝完全不同。Rust中有一种特殊注解，Copy特性注解。以下类型符合这种特性（类似java中基础类型）。
 
 有Copy特性注解：
+
 - 整型、浮点型、布尔、字符。
 - 元组：元数类型必须有Copy特性，(u32, String)就不行。
 
@@ -486,6 +489,7 @@ fn add(x: i32, y: i32) -> i32 {
 5. 所有权和返回值
 
 返回值可以转移所有权。看如下示例：
+
 ```rust
 fn main() {
     let x = String::from("hello"); // x所有权转移给one_fun函数，x值无效
@@ -504,6 +508,7 @@ fn two_fun(y: String) -> String {
 ```
 
 以上代码重复出现所有权转移，比较繁琐。而且如果我们返回值不是x是其他值，但是还想继续拥有x的所有权该如何实现了，可以使用元组返回。示例如下：
+
 ```rust
 fn main() {
     let x = String::from("hello");
@@ -531,11 +536,11 @@ fn main() {
     show(&s);
 
     // 此作用域变量s任然有效
-    print!("s:{}",s);
+    print!("s:{}", s);
 }
 
-fn show(str: &String){ // 借用s变量
-    println!("借用内容：{}",str) // 进行操作
+fn show(str: &String) { // 借用s变量
+    println!("借用内容：{}", str) // 进行操作
 }// 函数结束，并未拥有值的所有权，不做任何操作
 ```
 
@@ -551,18 +556,19 @@ fn main() {
     show(&s);
 
     // 此作用域变量s任然有效
-    print!("s:{}",s);
+    print!("s:{}", s);
 }
 
-fn show(str: &String){ // 借用s变量
+fn show(str: &String) { // 借用s变量
     str.push_str(" rust!"); // 这里编译不会通过，引用不可修改 
-    println!("借用内容：{}",str) // 进行操作
+    println!("借用内容：{}", str) // 进行操作
 }// 函数结束，并未拥有值的所有权，不做任何操作
 ```
 
 2. 可变引用
 
 如果非要对引用进行修改，这时就需要可变引用，`&mut param`，**使用可变引用必须让原变量为可变mut**
+
 ```rust
 fn main() {
     // 创建变量s,s作用域开始
@@ -648,6 +654,7 @@ fn get_str() -> &String { // 返回值引用
 ```
 
 _**总结：**_
+
 - 同一作用域，要么只有一个可变引用，要么有多个引用。
 - 引用总是有效。（不是悬垂引用）
 
@@ -666,7 +673,7 @@ fn main() {
 fn first_word(str: &String) -> usize {
     let bytes = str.as_bytes();
     for (i, &item) in bytes.iter().enumerate() {
-        if item == b' '{
+        if item == b' ' {
             return i;
         }
     };
@@ -688,7 +695,7 @@ fn main() {
 fn first_word(str: &String) -> usize {
     let bytes = str.as_bytes();
     for (i, &item) in bytes.iter().enumerate() {
-        if item == b' '{
+        if item == b' ' {
             return i;
         }
     };
@@ -696,9 +703,8 @@ fn first_word(str: &String) -> usize {
 }
 ```
 
+有没有一种方法可以直接获得内容，但是不依赖原数据了，rust解决方案是新增一个字符串类型**字符串slice**，表示类型使用 **`&str`**。 使用slice类型对代码进行修改：
 
-有没有一种方法可以直接获得内容，但是不依赖原数据了，rust解决方案是新增一个字符串类型**字符串slice**，表示类型使用 **`&str`**。
-使用slice类型对代码进行修改：
 ```rust
 fn main() {
     let mut s = String::from("This is test");
@@ -742,6 +748,7 @@ fn first_word(str_temp: &str) -> &str {
 其他类型的slice。
 
 数组slice：
+
 ```rust
 fn main() {
     let x = [1, 2, 3, 4, 5];
@@ -757,6 +764,7 @@ fn main() {
 ## 6.1 创建使用结构体
 
 定义使用结构体：
+
 ```rust
 struct User {
     name: String,
@@ -779,6 +787,7 @@ fn main() {
 通过少量的修改来创建一个新的结构体实例，其他属性的值不变。以往这是一个繁琐和无意义的步骤，在rust中可以通过结构体更新语法实现。
 
 结构体更新语法：
+
 ```rust
 struct User {
     name: String,
@@ -826,8 +835,9 @@ fn main() {
 ## 6.2 没有属性名称的结构体：**元组结构体**
 
 顾名思义这是一个元组结构体。
+
 ```rust
-struct Color(i32,i32,i32);
+struct Color(i32, i32, i32);
 
 fn main() {
     let black = Color(0, 0, 0);
@@ -903,6 +913,7 @@ fn area(r: &Rectangle) -> u32 {
 方法类似函数，只不过定义在impl代码块中，将它指向某个结构体。（很类似java中的类方法）
 
 将计算面积方法放在结构体重：
+
 ```rust
 #[derive(Debug)]
 struct Rectangle {
@@ -955,7 +966,7 @@ impl Rectangle {
 }
 
 fn main() {
-    let r1 = Rectangle::new(100,30);
+    let r1 = Rectangle::new(100, 30);
 
     let area = r1.area();
 
@@ -976,7 +987,7 @@ fn main() {
 枚举类似结构体定义，关键字使用`enum`，调用使用`::`。
 
 ```rust
-enum IpProtocol{
+enum IpProtocol {
     IPv4,
     IPv6
 }
@@ -987,6 +998,7 @@ fn main() {
 ```
 
 较为复杂的枚举：
+
 ```rust
 #[derive(Debug)]
 enum Message {
@@ -1012,6 +1024,7 @@ fn main() {
 ```
 
 在定义枚举中，它的内部属性：
+
 - `Tag`：单元结构体
 - `Writer(String)`：元组结构体
 - `Color(i32, i32, i32),`：元组结构体
@@ -1059,9 +1072,10 @@ fn main() {
 ```
 
 **match使用规则**：
+
 - match匹配是穷举的，所有要保证例出所有情况，也可以使用`other`或`_`来表示其他所有情况，**必须放在最后面**。
-  - other：表示匹配其他所有情况，同时还需要使用这个值
-  - _：表示匹配其他所有情况，但是不使用被匹配到的值（其他情况不作任何处理`_ => ()`）
+    - other：表示匹配其他所有情况，同时还需要使用这个值
+    - _：表示匹配其他所有情况，但是不使用被匹配到的值（其他情况不作任何处理`_ => ()`）
 
 ## 7.3 if let 控制流程
 
@@ -1082,17 +1096,317 @@ fn main() {
 
 # 8. 包、Crate和模块
 
+这是很令我头疼的一部分知识，一是这是新知识，二与我所熟悉的java包完全不同，先入为主的我会觉得这也太绕了太复杂了。
+
+让我们来认识认识这令人头疼的概念：
+
+- 包：包是提供一系列功能的一个crate或多个crate。
+- crate：编译时最小单位，主要分为两种，二进制项目和库项目，可以包含多个模块。（主入口文件及主文件'引用'的代码）
+- 模块：很类似java中类，可以在同一个文件中，也可以是单个文件。
+
+## 8，1 定义包、Crate和模块
+
+在Rust中关于包、Crate和模块的相关概念：
+
+- 从crate根节点开始：当编译crate时，编译器会首先在根文件（二进制项目是main.rs，库项目则是lib.rs）中查找需要被编译的代码。
+- 声明模块：你可以在根文件中声明一个新的模块`mod garden`，编译器会在声明后大括号中查找（如果声明后不是分号而是大括号）或`src/garden.rs`或`src/garden/mod.rs`。
+- 声明子模块：与声明模块一样，不同的是声明不在根文件中。
+- 模块中的代码路径：一个模块是你crate中的一部分，在访问权限运行的前提下，你可以在任意一个地方使用它。
+- 私有和公有：默认所有属性，变量，结构体，枚举和模块都是私有的，可以通过添加`pub`来设置公有权限。
+- use关键字：减少路径的重复使用，去掉冗余部分（类似java中impl，添加后就可以直接使用，无需添加路径前缀）。
+
+简单的多模块例子：
+
+main.rs
+
+```rust
+mod people;
+
+use crate::people::student::Student;
+
+fn main() {
+    // 通过模块方法生成一个Student类实例
+    let s = Student::new(String::from("fish"), 18, 'm', String::from("一年级二班"));
+    println!("{:?}", s)
+}
+```
+
+people.rs
+
+```rust
+pub mod student;
+```
+
+student.rs
+
+```rust
+#[derive(Debug)]
+pub struct Student {
+    name: String,
+    age: u8,
+    sex: char,
+    class: String,
+}
+
+impl Student {
+    pub fn new(name: String, age: u8, sex: char, class: String) -> Self {
+        Self {
+            name,
+            age,
+            sex,
+            class,
+        }
+    }
+}
+```
+
+文件路径示意图：
+
+HelloRust ├── Cargo.lock ├── Cargo.toml └── src ├── people │ └── student.rs ├── people.rs └── main.rs
+
+真不容易我能简单的理解，记得需要添加pub，rust默认全部是私有的。
+
+模块是可以被嵌套的，以下示例可以看出（在同一个文件中举例），也可以理解为模块分组：
+
+```rust
+// 动物
+mod animal {
+    // 会飞的动物
+    pub mod fly {
+        pub fn fly_go() {
+            println!("我会飞");
+        }
+    }
+
+    // 会跑的动物
+    pub mod run {
+        pub fn run_go() {
+            println!("我会跑");
+        }
+    }
+}
+
+// 相对路径
+use animal::run::run_go;
+
+// 绝对路径
+use crate::animal::fly::fly_go;
+
+fn main() {
+    run_go();
+    fly_go();
+}
+```
+
+关于引用路径，还可以使用`super`关键字来表示从父目录开始。
+
+## 8.2 use的使用
+
+在前面的示例中我们以及开始使用use来解决重复路径问题，但是这也造成出现其他问题：模块名相同，不知道被调用代码出处。
+
+一般use路径到被调代码的父类即可，例如我们使用student下的count方法时，我们use到student即可。通过`student::count()`来调用，这也解决同名问题。
+
+还可以通过使用as为use导入进来的代码起一个别名来进行区分。例如`use crate::people::student::Stdeutn as PeopleStudent`。
 
 
+> pub use重导出
+
+将其他模块通过use导入到自己代码中，别人如果也需要调用它时，就必须重新使用老路径。通过pub use将代码变为自己的一部分，并对外暴露。
+
+> use的嵌套
+
+```rust
+use std::cmp::Ordering;
+use std::io;
+// 可以改为如下
+use std::{cmp::Ordering, io};
 
 
+use std::io;
+use std::io::Write;
+// 可以修改成如下情况
+use std::{Self, Write};
+
+```
+
+> 将所有的公有定义导入当前作用域，使用通配符*
+```rust
+use std::collection::*;
+```
+
+# 9. 常见集合
+
+## 9.1 Vector
+
+1. 新建Vector
+
+新建空Vector集合：`let v: Vec<i32> = Vector::new();`
+
+使用`vec!`宏来创建Vector集合：`let v = vec![1,2,3,4];`
+
+2. 更新Vector
+
+```rust
+fn main() {
+  let mut v = vec![1, 2];
+  v.push(3);
+}
+```
+
+3. 读取Vector的值
+```rust
+fn main() {
+  let v = vec![1, 2, 3, 4];
+  // 使用索引读取
+  let one = &v[0];
+  // 使用get获得一个Option
+  let one_option = v.get(0);
+}
+```
+两者的区别：
+- 索引：当越界的时候就会导致程序直接报错结束。
+- get方法：返回的是option，所以不会报错，看调用者如何处理错误。
+
+4. 关于集合取值所有权问题
+
+如下执行就会报错：
+```rust
+fn main() {
+  let v = vec![1, 2, 3, 4];
+
+  let one = &v[0];
+
+  v.push(5);
+}
+```
+
+出现这种情况的原因是，当vec集合空间不足时，就会重新获得一个更大的存储空间，将原数据移动过去，这就导致原指向数据地址的数据不可用。Rust是不允许出现这种情况的，借用检查器会进行所有权规则检查。
+
+5. 遍历集合
+
+以下示例，遍历并修改值：
+```rust
+fn main() {
+  let v = vec![1, 2, 3, 4];
+  for item in &mut v{
+    // 这里需要使用解引用才能进行值的修改
+    *item += 50;
+  }
+}
+```
+
+6. 存储多种类型
+
+Vector是只能存储一种类型数据，但使用的是枚举类型，就可以达到存储多类型效果。
+
+```rust
+enum Animal {
+  // 单元结构体
+  Pig,
+  // 元组结构体
+  Cat(String),
+  // 元组结构体
+  Dog(u8),
+  // 结构体
+  Chicken {
+    age: u8,
+    kg: f64,
+  },
+}
+
+fn main() {
+  let animal = vec![
+    Animal::Pig,
+    Animal::Dog(8),
+    Animal::Chicken { age: 3, kg: 2.5 },
+  ];
+
+  for item in animal {
+    match item {
+      Animal::Pig => println!("thi is pig"),
+      Animal::Dog(i) => println!("thi is dog:{}", i),
+      Animal::Chicken { age, kg } => println!("this is chicken:{},{}", age, kg),
+      _ => ()
+    }
+  };
+}
+```
+
+## 9.2 字符串
+
+在Rust中，只有一种字符串类型就是Slice str。
+
+1. 新建字符串
+```rust
+fn main() {
+  let s1 = String::new();
+  let s2 = "Hello";
+  let s3 = String::from("Hello");
+}
+```
 
 
+2. 更新字符串
+```rust
+fn main() {
+  let mut s = String::from("foo");
+  s.push_str("bar");
 
 
+  let mut s1 = String::from("foo");
+  let s2 = "bar";
+  s1.push_str(s2);// 不会获得s2所有权，即使没有传引用
+  println!("s2 is {}", s2);
+}
+```
+
+3. 使用+或format!拼接字符串
+```rust
+fn main() {
+  let s1 = String::from("tic");
+  let s2 = String::from("tac");
+  let s3 = String::from("toe");
+  let s = format!("{}-{}-{}", s1, s2, s3);
+  println!("{}", s);
+}
+```
+
+下面使用+来实现拼接，拼接后s1便无效。这是因为+底层类似使用了`fn add(self, s: &str) -> String {`方法。
+```rust
+fn main() {
+    let s1 = String::from("tic");
+    let s2 = String::from("tac");
+    let s = s1 + &s2;
+    println!("{}", s);
+}
+```
+
+4. 令人头疼的字符串
+
+Rust字符串使用的是UTF-8，所包含的语言字符机会比较多。字符串的内部是`Vec<u8>`实现的。
+
+Rust是不支持直接通过索引来访问字符串内容的，这是因为不同的语言做占用的字节数不同，这样直接通过下标访问导致访问并不是真正的单个字符。
+
+但是Rust也提供了一种使用向标的方式，就是字符串Slice str，例如`&str[0..4]`。这种访问的使用需要谨慎。
 
 
+5. 字符串的遍历
 
+字符串的遍历需要明确是字符还是字节遍历：
+```rust
+fn main() {
+  let s1 = String::from("tic");
+  for item in s1.chars() {
+    println!("{}", item);
+  };
+
+  for item in s1.bytes() {
+    println!("{}", item);
+  };
+}
+```
+
+## 9.3 Hash Map
 
 
 
