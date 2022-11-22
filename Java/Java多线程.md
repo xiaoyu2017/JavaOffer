@@ -1,4 +1,3 @@
-[TOC]
 # 多线程
 
 ## sleep和wait区别
