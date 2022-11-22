@@ -1408,5 +1408,120 @@ fn main() {
 
 ## 9.3 Hash Map
 
+1. 新建Hash Map
 
+在标准库中是有实现HashMap的，但是需要手动引入。
+```rust
+use std::collections::HashMap;
 
+fn main() {
+  let mut scores = HashMap::new();
+
+  // 新增值
+  scores.insert("key", "val");
+
+  println!("{}", scores.get("key").expect(""));
+}
+```
+
+通过Vec转向HashMap：
+```rust
+use std::collections::HashMap;
+
+fn main() {
+  let x = vec![String::from("red"), String::from("blue")];
+  let y = vec![20, 4];
+
+  // 组合成HashMap
+  let x1: HashMap<_, _> = x.into_iter().zip(y.into_iter()).collect();
+
+  println!("{}", x1.get("red").expect(""));
+}
+```
+
+2. 遍历值
+```rust
+use std::collections::HashMap;
+
+fn main() {
+    let x = vec![String::from("red"), String::from("blue")];
+    let y = vec![20, 4];
+
+    // 组合成HashMap
+    let map: HashMap<_, _> = x.into_iter().zip(y.into_iter()).collect();
+
+    // 使用遍历加匹配解构
+    for (x, y) in &map {
+        println!("{}={}", x, y);
+    }
+    let option = &map.get("red");
+    // 通过get方法
+    match option {
+        Some(num) => println!("red={}", num),
+        _ => ()
+    }
+}
+```
+
+3. 更新值
+
+HashMap的键值只能是唯一的，当存入相同键值机会覆盖老值。
+```rust
+use std::collections::HashMap;
+
+fn main() {
+    // 组合成HashMap
+    let mut map: HashMap<String, u8> = HashMap::new();
+
+    map.insert(String::from("red"), 10);
+    // 存入相同key的值，将覆盖原来值
+    map.insert(String::from("red"), 20);
+
+    println!("red={}", map.get("red").expect(""));
+}
+```
+
+通过值存在与否创建更新值：
+```rust
+use std::collections::HashMap;
+
+fn main() {
+    // 组合成HashMap
+    let mut map: HashMap<String, u8> = HashMap::new();
+
+    map.insert(String::from("red"), 10);
+    // 存入相同key的值，将覆盖原来值
+    map.insert(String::from("red"), 20);
+
+    // 当值不存在时存入指定值
+    map.entry(String::from("red")).or_insert(50);
+    map.entry(String::from("blue")).or_insert(50);
+
+    println!("red={}", map.get("red").expect(""));
+    println!("blue={}", map.get("blue").expect(""));
+}
+```
+
+判断旧值情况进行更新：
+```rust
+use std::collections::HashMap;
+
+fn main() {
+    // 统计单词出现次数
+    let x = "A B C A D K C";
+
+    let mut y = HashMap::new();
+
+    for x in x.split_whitespace() {
+        let z = y.entry(x.to_string()).or_insert(0);
+        // 解引用进行值修改
+        *z += 1;
+    }
+
+    for (a, b) in y {
+        println!("{}={}", a, b);
+    }
+}
+```
+
+# 10 错误处理
