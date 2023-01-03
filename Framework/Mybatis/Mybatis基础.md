@@ -478,15 +478,227 @@ class Dept{
 
 # 10. 动态sql
 
+> 动态多条件查询就可以使用以下标签来实现
+
+## 10.1 if标签
+```xml
+<select id="findByCategory" resultType="Category">
+    select * from category where 1 = 1
+    <if test="name!=null and name!=''">
+        `name` = #{name}
+    </if>
+    <if test="status!=null">
+        `status` = #{status}
+    </if>
+</select>
+```
+
+## 10.2 where标签
+
+> 当所有条件都不成立时，这时where关键字就多余，可以使用where来解决这一问题
+
+```xml
+<select id="findByCategory" resultType="Category">
+    select * from category
+    <where>
+        <if test="name!=null and name!=''">
+            `name` = #{name}
+        </if>
+        <if test="status!=null">
+            and `status` = #{status}
+        </if>
+    </where>
+</select>
+```
+
+**where标签只能把if标签中多余的and或or去掉，放在结尾的and或or是去不掉的**
+
+## 10.3 trim标签
+
+```xml
+<!--
+    prefix|suffix：将trim标签前|后添加指定内容
+    prefixOverrides|suffixOverrides：将trim前后去掉指定内容
+-->
+<trim suffix="" prefix="" suffixOverrides="" prefixOverrides="" />
+```
+
+```xml
+<!--
+    trim：标签内内容全部成立也不会有效果
+-->
+<select id="findByCategory" resultType="Category">
+    select * from category
+    <trim  prefix="where" suffixOverrides="and|or">
+        <if test="name!=null and name!=''">
+            `name` = #{name} and
+        </if>
+        <if test="status!=null">
+            `status` = #{status} or
+        </if>
+    </trim>
+</select>
+```
 
 
+## 10.4 choose，when，otherwise
 
+```xml
+<!--
+    类似于if...else if...else if...else...
+    
+    choose:表示整个结构
+    when：类似elseif
+    otherwise：表示都不成立需要执行内容
+-->
+<select id="findByCategory" resultType="Category">
+    select * from category
+    <where>
+        <choose>
+            <when test="name!=null and name!=''">
+                `name` = #{name}
+            </when>
+            <when test="status!=null">
+                `status` = #{status}
+            </when>
+            <otherwise>
+                id = 1
+            </otherwise>
+        </choose>
+    </where>
+</select>
+```
 
+## 10.5 foreach
 
+```xml
+<!--
+    foreach：循环（for）
+        separator:分隔符
+        open：以什么开头
+        close：以什么结尾
+-->
+<delete id="deleteAll">
+    delete from category where id in
+    <foreach collection="ids" item="id" separator="," open="(" close=")">
+        #{id}
+    </foreach>
+</delete>
+```
 
+## 10.6 sql标签
 
+```xml
+<sql id="categoryColumn">id,name,status,sort</sql>
+<select id="findAll" resultType="Category">
+    select <include refid="categoryColumn" /> from category
+</select>
+```
 
+# 11 缓存
 
+> mybatis会把查询到的数据进行缓存，这样相同的查询无需数据库请求即可完成。
 
+## 11.1 一级缓存
 
+这是SqlSession层级的缓存默认开启，缓存是在一次sqlSession中存在的。相同SqlSession不同的mapper缓存也是共享的。
 
+**一级缓存失效：**
+- 使用不同的SqlSession
+- 两次查询条件不同
+- 两次查询之间进行增删改
+- 两次查询间手动清理缓存
+
+## 11.2 二级缓存
+
+开启：
+1. 确保cacheEnabled值为true（默认值），在全局设置中设置
+2. 映射文件中添加cache标签
+3. 二级缓存在SqlSession提交或关闭后生效
+4. 查询结果实体类必须实现序列化接口
+
+使二级缓存失效的情况：两次查询之间执行了任意的增删改，会使一级和二级缓存同时失效
+
+## 11.3 二级缓存设置
+- 在mapper配置文件中添加的cache标签可以设置一些属性
+- eviction属性：缓存回收策略
+  - LRU（Least Recently Used） – 最近最少使用的：移除最长时间不被使用的对象。
+  - FIFO（First in First out） – 先进先出：按对象进入缓存的顺序来移除它们。
+  - SOFT – 软引用：移除基于垃圾回收器状态和软引用规则的对象。
+  - WEAK – 弱引用：更积极地移除基于垃圾收集器状态和弱引用规则的对象。
+  - 默认的是 LRU
+- flushInterval属性：刷新间隔，单位毫秒
+  - 默认情况是不设置，也就是没有刷新间隔，缓存仅仅调用语句（增删改）时刷新
+- size属性：引用数目，正整数
+  - 代表缓存最多可以存储多少个对象，太大容易导致内存溢出
+- readOnly属性：只读，true/false
+  - true：只读缓存；会给所有调用者返回缓存对象的相同实例。因此这些对象不能被修改。这提供了很重要的性能优势。
+  - false：读写缓存；会返回缓存对象的拷贝（通过序列化）。这会慢一些，但是安全，因此默认是false
+
+## 11.4 MyBatis缓存查询的顺序
+
+- 先查询二级缓存，因为二级缓存中可能会有其他程序已经查出来的数据，可以拿来直接使用
+- 如果二级缓存没有命中，再查询一级缓存
+- 如果一级缓存也没有命中，则查询数据库
+- SqlSession关闭之后，一级缓存中的数据会写入二级缓存
+
+# 12. 分页插件
+
+1. 添加插件
+```xml
+<!--分页插件-->
+<dependency>
+    <groupId>com.github.pagehelper</groupId>
+    <artifactId>pagehelper</artifactId>
+    <version>5.3.2</version>
+</dependency>
+```
+
+2. 核心配置文件配置
+```xml
+<!--添加插件-->
+<plugins>
+    <!--分页插件-->
+    <plugin interceptor="com.github.pagehelper.PageInterceptor"/>
+</plugins>
+```
+
+3. 3种简单实现
+```java
+@Test
+public void testCategoryPage1() {
+    PageHelper.startPage(1, 3);
+    List<Object> list = sqlSession.selectList("categoryMapper.findAll");
+    System.out.println(list);
+}
+
+@Test
+public void testCategoryPage2() {
+    Page<Object> page = PageHelper.startPage(1, 4);
+    List<Object> list = sqlSession.selectList("categoryMapper.findAll");
+    System.out.println(page);
+    System.out.println(list);
+}
+
+@Test
+public void testCategoryPage3() {
+    PageHelper.startPage(1, 4);
+    List<Category> list = sqlSession.selectList("categoryMapper.findAll");
+    PageInfo<Category> page = new PageInfo<>(list, 5);
+    System.out.println(page);
+}
+```
+
+Page和PageInfo相关属性：
+- list：分页之后的数据
+- pageNum：当前页的页码
+- pageSize：每页显示的条数
+- size：当前页显示的真实条数
+- total：总记录数
+- pages：总页数
+- prePage：上一页的页码
+- nextPage：下一页的页码
+- isFirstPage/isLastPage：是否为第一页/最后一页
+- hasPreviousPage/hasNextPage：是否存在上一页/下一页
+- navigatePages：导航分页的页码数
+- navigatepageNums：导航分页的页码，[1,2,3,4,5]
