@@ -702,3 +702,63 @@ Page和PageInfo相关属性：
 - hasPreviousPage/hasNextPage：是否存在上一页/下一页
 - navigatePages：导航分页的页码数
 - navigatepageNums：导航分页的页码，[1,2,3,4,5]
+
+# 13. 注解开发
+
+> 注解只适合简单的语句，并不适合复杂语句，使本就复杂的sql更复杂。使用注解开发不需要再创建Mapper配置文件。
+
+> 主要的注解`@Select、@Insert、@Delete，@Update`
+
+## 13.1 简单实用
+```java
+public interface MenuMapper {
+  @Insert("insert into menu(`name`, `icon`, `link`, `parent`, `sort`, `status`) " +
+          "value (#{name}, #{icon}, #{link}, #{parent}, #{sort}, #{status});")
+  int insert(Menu menu);
+
+  @Insert("delete from menu where id = #{id}")
+  int delete(@Param("id") long id);
+
+  @Update("update menu set name = #{name}, icon = #{icon}, link = #{link}, sort = #{sort} where id = #{id}")
+  int update(Menu menu);
+
+  @Select("select * from menu where id = #{id}")
+  Menu select(@Param("id") long id);
+}
+```
+
+## 13.2 @Result、@Result、@One、@Many
+
+> `@Result`是来替换`<resultMap>`，`@Result`替换标签`<result>`，`@One`替换标签`<association>`，`@Many`替换标签`<collection>`
+
+@Result属性：
+- column:数据库列名
+- property：属性名
+- one|many：`@One|@Many`
+
+### 13.2.1 一对一
+```java
+public interface OrderMapper {
+
+  @Results({
+          @Result(property = "id", column = "id"),
+          @Result(property = "orderTime", column = "orderTime"),
+          @Result(property = "total", column = "total"),
+          @Result(property = "user", column = "uid", javaType = User.class, 
+                  one = @One(select = "User.findById"))
+  })
+  @Select("select * from order")
+  List<Order> findAll();
+}
+
+public interface User {
+  
+  @Select("select * from user where id = #{id}")
+  List<Order> findById(Integer id);
+}
+```
+
+### 13.2.1 一对多
+```java
+
+```
