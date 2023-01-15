@@ -745,20 +745,41 @@ public interface OrderMapper {
           @Result(property = "orderTime", column = "orderTime"),
           @Result(property = "total", column = "total"),
           @Result(property = "user", column = "uid", javaType = User.class, 
-                  one = @One(select = "User.findById"))
+                  one = @One(select = "UserMapper.findById"))
   })
   @Select("select * from order")
   List<Order> findAll();
 }
 
-public interface User {
+public interface UserMapper {
   
   @Select("select * from user where id = #{id}")
   List<Order> findById(Integer id);
 }
 ```
 
-### 13.2.1 一对多
+### 13.2.2 一对多
 ```java
+public interface UserMapper {
 
+  @Results({
+          @Result(property = "id", column = "id"),
+          @Result(property = "name", column = "name"),
+          @Result(property = "sex", column = "sex"),
+          @Result(property = "order", column = "id", javaType = List.class,
+                  many = @Many(select = "OrderMapper.findById"))
+  })
+  @Select("select * from order")
+  List<User> findAll();
+}
+
+public interface OrderMapper {
+
+  @Select("select * from order where id = #{id}")
+  List<Order> findById(Integer id);
+}
 ```
+
+### 13.2.3 多对多
+
+> 和一对多很类似，只不过一对多返回的结果是单行数据，多对多返回的是集合。
