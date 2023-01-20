@@ -531,6 +531,68 @@ public class DaoAdvice {
 
 > 事务在数据库中很重要，主要用于处理一些异常导致的数据问题。在Spring中提供两种事务使用方式，声明事务和编程事务。
 
+## 7.1 简单案例
+
+> 同时操作两行数据，模拟转账，一个用户钱减少另一个增加。
+
+```java
+public interface AccountMapper {
+
+    @Update("update account set money = money - #{money} where id = #{out}")
+    void outMoney(@Param("out") int out,@Param("money") double money);
+
+    @Update("update account set money = money + #{money} where id = #{in}")
+    void inMoney(@Param("in") int in,@Param("money") double money);
+}
+
+@Service
+public class AccountServiceImpl implements AccountService {
+
+   @Autowired
+   AccountMapper accountMapper;
+
+   @Transactional
+   public boolean trnsfer(int out, int in, Double money) {
+
+      accountMapper.outMoney(out, money);
+
+      // 此处出现异常，事务就会自动回滚，数据都不会进行修改
+      int i = 1 / 0;
+
+      accountMapper.inMoney(in, money);
+
+      return true;
+   }
+}
+
+@Configuration
+@ComponentScan("cn.fishland")
+@PropertySource("classpath:jdbc.properties")
+@Import({JdbcConfig.class, MybatisConfig.class})
+// 开启事务管理
+@EnableTransactionManagement
+public class Appconfig {
+
+   // 装配事务管理
+   @Bean
+   public PlatformTransactionManager platformTransactionManager(DataSource dataSource) {
+      DataSourceTransactionManager dataSourceTransactionManager = new DataSourceTransactionManager();
+      dataSourceTransactionManager.setDataSource(dataSource);
+      return dataSourceTransactionManager;
+   }
+}
+
+
+// 测试
+public class Application {
+   public static void main(String[] args) {
+      AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(Appconfig.class);
+      AccountService accountService = context.getBean(AccountService.class);
+      accountService.trnsfer(1, 2, 100d);
+   }
+}
+```
+
 
 
 
