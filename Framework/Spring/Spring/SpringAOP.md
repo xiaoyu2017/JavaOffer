@@ -593,6 +593,147 @@ public class Application {
 }
 ```
 
+> 事务注解可以放在类方法上也可放在类上，实现类和接口类都行，**一般放在实现类上**。
+
+## 7.2 事务角色
+
+> 事务角色分为事务管理员和事务协调员
+
+在不添加事务管理的情况下：
+
+1. 开启事务一，运行后自动提交
+
+![](../../../img/spring4.png)
+
+2. 开始事务二，运行后自动提交
+
+![](../../../img/spring5.png)
+
+3. 当以上一二步骤之间出现异常，事务一正常提交，并不会回滚。
+
+当添加Spring事务之后：
+
+事务管理员会把单独的事务一和二统一起来管理，事务协调员代指dao或业务层。
+
+![](../../../img/spring7.png)
+
+## 7.3 事务注解属性
+
+![](../../../img/spring8.png)
+
+1. readOnly：true只读事务，false读写事务。
+2. timeout：设置事务超时时长单位为秒。-1表示不设置时长
+3. rollbackFor：设置出现指定异常进行回滚。
+   1. 并不是所有异常都会进行回滚，只有RuntimeException和Error这两个异常及其子类才会进行回滚。
+4. noRollbackFor：设置出现指定异常不进行回滚
+5. rollbackForClassName：同rollbackFor，值为异常全类名字符串
+6. noRollbackForClassName：同于noRollbackFor，只不过属性为异常的类全名字符串
+7. isolation：设置事务隔离级别
+   1. DEFAULT :默认隔离级别, 会采用数据库的隔离级别
+   2. READ_UNCOMMITTED : 读未提交
+   3. READ_COMMITTED : 读已提交
+   4. REPEATABLE_READ : 重复读取
+   5. SERIALIZABLE: 串行化
+
+## 7.4 事务传播行为
+
+> 提出问题，在进行转账后需要添加事务，无论是否成功都需要添加日志，如果正常添加就会出现问题。
+
+正常思路问题代码：
+```java
+public interface LogService {
+
+    List<Account> getAll();
+
+    boolean add(Log log);
+}
+
+@Service
+public class LogServiceImpl implements LogService {
+
+   @Autowired
+   LogMapper logMapper;
+
+   public List<Account> getAll() {
+      return logMapper.selectAll();
+   }
+
+   @Transactional
+   public boolean add(Log log) {
+      return logMapper.insert(log) == 1;
+   }
+}
+
+@Service
+public class AccountServiceImpl implements AccountService {
+
+   @Autowired
+   AccountMapper accountMapper;
+
+   @Autowired
+   LogService logService;
+
+   @Transactional
+   public boolean trnsfer(int out, int in, Double money) {
+      boolean flag = false;
+      try {
+         accountMapper.outMoney(out, money);
+         // 出现异常后所有事务都会回滚，日志也不会提交
+         int x = 1 / 0;
+         accountMapper.inMoney(in, money);
+         flag = true;
+         return true;
+      } finally {
+         logService.add(new Log("trnsfer money " + flag, new Date()));
+      }
+   }
+}
+```
+
+> 解决思路，日志操作事务与转账操作分开，是单独的事务。Spring中用到的是事务传播行为。
+
+设置一下事务传播行为即可：
+```java
+@Service
+public class LogServiceImpl implements LogService {
+
+    @Autowired
+    LogMapper logMapper;
+
+    public List<Account> getAll() {
+        return logMapper.selectAll();
+    }
+
+    // 开启一个新的事务
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public boolean add(Log log) {
+        return logMapper.insert(log) == 1;
+    }
+}
+```
+
+事务传播行为：
+
+|传播属性|说明|
+|---|---|
+|Required（默认值）|当前存在事务就加入，不存在就创建|
+|Support|当前存在事务就加入，不存在就以非事务形式执行|
+|Mandatory|当前存在事务就加入，不存在事务就报错|
+|Required_new|无论当前是否存在事务，都会新建事务|
+|no_support|以非事务形式运行，当前存在事务就挂起|
+|never|以非事务形式运行，当前存在事务就报错|
+|nested|当前存在事务就在嵌套事务中运行，不存在就执行Required传播行为|
+
+
+
+
+
+
+
+
+
+
+
 
 
 
