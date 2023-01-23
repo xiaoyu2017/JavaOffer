@@ -783,3 +783,13 @@ public interface OrderMapper {
 ### 13.2.3 多对多
 
 > 和一对多很类似，只不过一对多返回的结果是单行数据，多对多返回的是集合。
+
+## 13.3 注解配置属性
+
+```java
+public interface UserDao {
+    @Options(useGeneratedKeys = true, keyProperty = "id", keyColumn = "id")
+    @Insert("INSERT INTO user (name, age, email, birthday) VALUES(#{name}, #{age}, #{email}, #{birthday})")
+    int insert(User user);
+}
+```
