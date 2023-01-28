@@ -114,6 +114,163 @@ spring:
 
 非临时实例：采用主动询问检测服务健康
 
+# 3. 配置中心
 
+> Nacos除了可以做注册中心，同样可以做配置管理来使用。
 
+![](../../../../img/nacos9.png)
+![](../../../../img/nacos10.png)
 
+**核心配置（不会变的）还是放在项目中的，经常变的放在配置中心**
+
+## 3.1 拉取配置
+
+> 配置中心在配置中，不加载配置文件怎么拉取配置了，但是加载配置了拉取的配置又如何应用了。这就存在一个悖论，Spring提供了一个
+> bootstrap.yml配置文件来解决这一问题。
+
+工作流程：
+![](../../../../img/nacos11.png)
+
+## 3.2 实践
+
+1.新建bootstrap.properties配置文件
+
+```yaml
+# bootstrap.properties
+
+# 环境
+spring.profiles.active=dev
+
+  # 服务名称
+spring.application.name=mall-gateway
+
+  # 配置文件后缀
+spring.cloud.nacos.config.file-extension=yaml
+
+  # 注册中心地址
+spring.cloud.nacos.config.server-addr=localhost:8848
+
+  # 命名空间，nacos提供
+spring.cloud.nacos.config.namespace=02d2e7ec-66de-441d-bef8-f1a7e03b6fd2
+```
+
+2.添加依赖
+
+```xml
+
+<dependencies>
+    <dependency>
+        <groupId>com.alibaba.cloud</groupId>
+        <artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId>
+    </dependency>
+    <!--SpringCloudAlibaba2020版本后需要添加-->
+    <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-starter-bootstrap</artifactId>
+    </dependency>
+</dependencies>
+```
+
+3.nacos添加配置文件
+
+打开nacos网页界面，选择配置管理>配置列表>创建配置：
+
+![](../../../../img/nacos12.png)
+
+4.运行查看即可，可以通过以下方式注入配置值：
+
+```java
+// 方式一：启动项目时查看
+
+@SpringBootApplication
+public class GatewayApplication {
+    public static void main(String[] args) {
+        ConfigurableApplicationContext context = SpringApplication.run(GatewayApplication.class, args);
+        // 通过上下文获得配置内容
+        System.out.println("mall.name=" + context.getEnvironment().getProperty("mall.name"));
+        System.out.println("mall.age=" + context.getEnvironment().getProperty("mall.age"));
+        System.out.println("mall.email=" + context.getEnvironment().getProperty("mall.email"));
+    }
+}
+```
+
+```java
+// 方式二：通过@Value值注入
+
+@SpringBootApplication
+public class GatewayApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(GatewayApplication.class, args);
+    }
+
+    // 偷懒写法，类似新建一个controller类
+    @Controller
+    @ResponseBody
+    class ConfigTest {
+        // 注入配置属性值
+        @Value("${mall.name}")
+        String mallName;
+
+        // 通过请求可以得到配置值
+        @GetMapping("/config")
+        @ResponseBody
+        public String configTest() {
+            return mallName;
+        }
+    }
+}
+```
+
+```java
+// 方式三：通过@ConfigurationProperties(prefix = "mall")注解来接收配置内容
+
+@SpringBootApplication
+public class UserApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(UserApplication.class, args);
+    }
+
+    // 偷懒写法，类似新建一个controller类
+    @Controller
+    @ResponseBody
+    class ConfigTest {
+        // 注入配置属性对象
+        @Autowired
+        ConfigPojo configPojo;
+
+        // 通过请求可以得到配置值
+        @GetMapping("/config")
+        @ResponseBody
+        public ConfigPojo configTest() {
+            return configPojo;
+        }
+    }
+
+    @Data
+    @Component
+    // 配置数据前缀
+    @ConfigurationProperties(prefix = "mall")
+    class ConfigPojo {
+        String name;
+        Integer age;
+        String email;
+    }
+}
+```
+
+## 3.3 配置共享
+
+> 在加载配置文件时，项目不仅仅会加载指定配置文件，还会同步共享配置，共享配置是以服务名为名的文件，查看加载日：
+
+![](../../../../img/nacos13.png)
+
+- 环境配置文件：`[spring.application.name]-[spring.profiles.active].yaml`
+- 共享配置文件：`[spring.application.name].yaml`
+
+直接在nacos发布共享配置文件即可。
+
+## 3.4 配置文件优先级
+
+![](../../../../img/nacos14.png)
+
+# 4. 集群搭建
