@@ -194,7 +194,7 @@ ENTRYPOINT java -jar /tmp/app.jar
 
 > Docker Compose就是一个文本文件，而无需手动一个个创建和运行容器！Compose就是一个文本文件。
 
-细语法参考官网：[官网](https://docs.docker.com/compose/compose-file/)
+语法参考官网：[官网](https://docs.docker.com/compose/compose-file/)
 
 创建Compose文件：
 
@@ -244,6 +244,7 @@ services:
 > mysql目录是用于挂载目录。
 
 三个服务项目目录下的Dockerfile配置：
+
 ```text
 FROM java:8-alpine
 COPY ./app.jar /tmp/app.jar
@@ -251,6 +252,7 @@ ENTRYPOINT java -jar /tmp/app.jar
 ```
 
 修改服务配置文件，微服务容器之间访问使用的是容器名称访问：
+
 ```yaml
 spring:
   datasource:
@@ -260,31 +262,166 @@ spring:
     driver-class-name: com.mysql.jdbc.Driver
   application:
     name: mall-user
-  cloud:
-    nacos:
-      server-addr: nacos:8848 # nacos服务地址
+  cloud:dock
+  nacos:
+    server-addr: nacos:8848 # nacos服务地址
 ```
 
 使用maven打包服务：
+
 ```xml
+
 <build>
-  <!-- 服务打包的最终名称 -->
-  <finalName>app</finalName>
-  <plugins>
-    <plugin>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-maven-plugin</artifactId>
-    </plugin>
-  </plugins>
+    <!-- 服务打包的最终名称 -->
+    <finalName>app</finalName>
+    <plugins>
+        <plugin>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-maven-plugin</artifactId>
+        </plugin>
+    </plugins>
 </build>
 ```
 
 在当前目录执行构建命令：`docker-compose up -d`
 
-
 # 8. 安装Docker
 
+## 8.1 Centos7安装
+
+卸载老版本：
+
+```shell
+yum remove docker \
+  docker-client \
+  docker-client-latest \
+  docker-common \
+  docker-latest \
+  docker-latest-logrotate \
+  docker-logrotate \
+  docker-selinux \
+  docker-engine-selinux \
+  docker-engine \
+  docker-ce
+```
+
+安装yum：系统需要联网
+
+```shell
+yum install -y yum-utils \
+           device-mapper-persistent-data \
+           lvm2 --skip-broken
+```
+
+设置镜像源：
+
+```shell
+# 设置docker镜像源
+yum-config-manager \
+    --add-repo \
+    https://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo
+    
+sed -i 's/download.docker.com/mirrors.aliyun.com\/docker-ce/g' /etc/yum.repos.d/docker-ce.repo
+
+yum makecache fast
+```
+
+安装docker-ce：社区免费版
+
+```shell
+yum install -y docker-ce
+```
+
+docker需要使用各种端口，所以建议使用时关闭防火墙：
+
+```shell
+# 关闭
+systemctl stop firewalld
+# 禁止开机启动防火墙
+systemctl disable firewalld
+```
+
+docker的操作命令：
+
+```shell
+systemctl start docker  # 启动docker服务
+
+systemctl stop docker  # 停止docker服务
+
+systemctl restart docker  # 重启docker服务
+```
+
+配置阿里镜像：[阿里镜像配置](https://cr.console.aliyun.com/cn-hangzhou/instances/mirrors?accounttraceid=cb36295bddcd4367b89d118e2471c930hdty)
+
+## 8.2 Centos7安装DockerCompose
+
+下载安装包：
+
+```shell
+# 安装
+curl -L https://github.com/docker/compose/releases/download/1.23.1/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose
+```
+
+```shell
+# 修改权限
+chmod +x /usr/local/bin/docker-compose
+```
+
+```shell
+# 补全命令
+curl -L https://raw.githubusercontent.com/docker/compose/1.29.1/contrib/completion/bash/docker-compose > /etc/bash_completion.d/docker-compose
+```
+
+如果有错误：`echo "199.232.68.133 raw.githubusercontent.com" >> /etc/hosts`
+
 # 7. 搭建Docker镜像私库
+
+## 7.1 简化版私有仓库
+
+> 由Docker官网提供的简易仓库管理镜像，功能完善，但是不具备操作化界面。
+
+```shell
+docker run -d \
+    --restart=always \
+    --name registry	\
+    -p 5000:5000 \
+    -v registry-data:/var/lib/registry \
+    registry
+```
+
+## 7.2 图形界面仓库
+
+> 使用DockerCompose部署界面化仓库
+
+```yaml
+version: '3.0'
+services:
+  registry:
+    image: registry
+    volumes:
+      - ./registry-data:/var/lib/registry
+  ui:
+    image: joxit/docker-registry-ui:static
+    ports:
+      - 8080:80
+    environment:
+      - REGISTRY_TITLE=我的私有仓库
+      - REGISTRY_URL=http://registry:5000
+    depends_on:
+      - registry
+```
+
+配置信任地址：
+```shell
+# 打开要修改的文件
+vi /etc/docker/daemon.json
+# 添加内容：
+"insecure-registries":["http://192.168.150.101:8080"]
+# 重加载
+systemctl daemon-reload
+# 重启docker
+systemctl restart docker
+```
 
 # 9. 镜像推送拉取
 
