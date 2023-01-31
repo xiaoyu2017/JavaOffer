@@ -6,14 +6,14 @@
 
 > Docker将应用、依赖、函数库和配置一起打包，形成可运行镜像。Docker应用运行在容器中，采用沙箱机制，相互隔离就不存在依赖兼容问题。
 
-![](../img/docker0.png)
+![](https://github.com/xiaoyu2017/JavaOffer/blob/master/img/docker0.png?raw=true)
 
 ## 1.2 Docker和虚拟机区别
 
 - Docker是系统的一个进程，模仿系统运行的环境，环境之间是相互隔离的。虚拟机模仿设备硬件，然后在模拟硬件上运行其他操作系统。
 - docker体积小，运行快，性能好。虚拟机体积大，运行慢，性能一般。
 
-![](../img/docker1.png)
+![](https://github.com/xiaoyu2017/JavaOffer/blob/master/img/docker1.png?raw=true)
 
 ## 1.3 镜像和容器
 
@@ -23,11 +23,11 @@
 
 镜像分为两部分：`repository:tag`，在没有指定版本情况下默认是latest。
 
-![](../img/docker2.png)
+![](https://github.com/xiaoyu2017/JavaOffer/blob/master/img/docker2.png?raw=true)
 
 # 2. 基本操作
 
-![](../img/docker4.png)
+![](https://github.com/xiaoyu2017/JavaOffer/blob/master/img/docker4.png?raw=true)
 
 ## 2.1 pull
 
@@ -61,7 +61,7 @@
 
 # 3. 容器操作
 
-![](../img/docker5.png)
+![](https://github.com/xiaoyu2017/JavaOffer/blob/master/img/docker5.png?raw=true)
 
 ## 3.1 run
 
@@ -118,7 +118,7 @@ restart:`docker restart 容器名称`，重启一个容器。
 
 > **数据卷（volume）**是一个虚拟目录，指向宿主机文件系统中的某个目录。不同系统可能存在差异（宿主系统）。
 
-![](../img/docker3.png)
+![](https://github.com/xiaoyu2017/JavaOffer/blob/master/img/docker3.png?raw=true)
 
 ## 4.1 操作命令
 
@@ -146,10 +146,10 @@ docker run \
 
 > 我们只需要告诉Docker，我们的镜像的组成，需要哪些BaseImage、需要拷贝什么文件、需要安装什么依赖、启动脚本是什么，将来Docker会帮助我们构建镜像
 
-![](../img/docker7.png)
+![](https://github.com/xiaoyu2017/JavaOffer/blob/master/img/docker7.png?raw=true)
 
 示例：
-![](../img/docker6.png)
+![](https://github.com/xiaoyu2017/JavaOffer/blob/master/img/docker6.png?raw=true)
 
 > **Dockerfile**就是一个文本文件，其中包含一个个的**指令(Instruction)**，用指令来说明要执行什么操作来构建镜像。每一个指令都会形成一层Layer。
 
@@ -239,7 +239,7 @@ services:
 
 新建文件目录：
 
-![](../img/docker8.png)
+![](https://github.com/xiaoyu2017/JavaOffer/blob/master/img/docker8.png?raw=true)
 
 > mysql目录是用于挂载目录。
 
@@ -430,5 +430,3 @@ systemctl restart docker
 推送镜像：`docker push 本地仓库名称:端口/nginx:1.0 `
 
 拉取镜像：`docker pull 本地仓库名称:端口/nginx:1.0 `
-
-
