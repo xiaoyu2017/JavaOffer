@@ -255,7 +255,7 @@ POST /mall/_update/1
 示例：`DELETE /mall/_doc/1`
 
 
-# 4. RestApi
+# 4. RestApi增删改
 
 > es官网提供了各种语言的客户端
 
@@ -768,14 +768,499 @@ GET /indexName/_search
 }
 ```
 
+## 5.2 精确查询
+
+精确查询一般是查找keyword、数值、日期、boolean等类型字段。所以**不会**对搜索条件分词。常见的有：
+
+- term：根据词条精确值查询
+- range：根据值的范围查询
+
+### 5.2.1 term
+
+```json
+// term查询语法
+GET /indexName/_search
+{
+  "query": {
+    "term": {
+      "FIELD": {
+        "value": "VALUE"
+      }
+    }
+  }
+}
+```
+
+```json
+GET /mall/_search
+{
+  "query": {
+    "term": {
+      "city":"上海"
+    }
+  }
+}
+```
+
+### 5.2.2 range
+
+```json
+// range查询语法
+GET /indexName/_search
+{
+  "query": {
+    "range": {
+      "FIELD": {
+        "gte": 10, // 这里的gte代表大于等于，gt则代表大于
+        "lte": 20 // lte代表小于等于，lt则代表小于
+      }
+    }
+  }
+}
+```
+
+```json
+GET /mall/_search
+{
+  "query": {
+    "range": {
+      "score": {
+        "gte": 3, 
+        "lte": 5 
+      }
+    }
+  }
+}
+```
+
+## 5.2 地标查询
+
+> 使用地标查询需要坐标字段
+
+```json
+// geo_bounding_box查询，这是矩形查询，通过两个点确定范文，在范文内既符合调价
+GET /indexName/_search
+{
+  "query": {
+    "geo_bounding_box": {
+      "FIELD": {
+        "top_left": { // 左上点
+          "lat": 31.1,
+          "lon": 121.5
+        },
+        "bottom_right": { // 右下点
+          "lat": 30.9,
+          "lon": 121.7
+        }
+      }
+    }
+  }
+}
+```
+
+```json
+// geo_distance 查询，以一点为圆心，指定半径画圆，在园内的符合条件
+GET /indexName/_search
+{
+  "query": {
+    "geo_distance": {
+      "distance": "15km", // 半径
+      "FIELD": "31.21,121.5" // 圆心
+    }
+  }
+}
+```
+
+## 5.3 复合查询
+
+合（compound）查询：复合查询可以将其它简单查询组合起来，实现更复杂的搜索逻辑。常见的有两种：
+
+- fuction score：算分函数查询，可以控制文档相关性算分，控制文档排名
+- bool query：布尔查询，利用逻辑关系组合多个其它的查询，实现复杂搜索
 
 
+### 5.3.1 算法函数查询
+
+> 当我们利用match查询时，文档结果会根据与搜索词条的关联度打分（_score），返回结果时按照分值降序排列。
+
+语法：
+```json
+GET /indexName/_search
+{
+  "query": {
+    "function_score": {
+      "query": {...},
+      "functions": [
+        {
+          "filter": {
+            "term": {
+              "brand": "如家5"
+            }
+          },
+          "weight": 10
+        }
+      ],
+      "boost_mode": "sum"
+    }
+  }
+}
+```
+
+![](../../../img/es0.png)
+
+- **2原始查询**条件：query部分，基于这个条件搜索文档，并且基于BM25算法给文档打分，**原始算分**（query score)
+- **3过滤条件**：filter部分，符合该条件的文档才会重新算分
+- **4算分函数**：符合filter条件的文档要根据这个函数做运算，得到的**函数算分**（function score），有四种函数
+  - weight：函数结果是常量
+  - field_value_factor：以文档中的某个字段值作为函数结果
+  - random_score：以随机数作为函数结果
+  - script_score：自定义算分函数算法
+- **5运算模式**：算分函数的结果、原始查询的相关性算分，两者之间的运算方式，包括：
+  - multiply：相乘
+  - replace：用function score替换query score
+  - 其它，例如：sum、avg、max、min
 
 
+```json
+GET /mall/_search
+{
+  "query": {
+    "function_score": {
+      "query": {
+        "match": {
+          "all": "酒店"
+        }
+      },
+      "functions": [
+        {
+          "filter": {
+            "term": {
+              "brand": "如家5"
+            }
+          },
+          "weight": 10
+        }
+      ],
+      "boost_mode": "sum"
+    }
+  }
+}
+```
+过程：
+- 查询复合是"酒店"的内容
+- 对查询结果进行过滤，过滤条件是`brand="如家5"`的商家
+- 重新进行算分，或者直接赋值`"weight": 10`
+- 重新算分后的结果与原分的操作，直接相加`"boost_mode": "sum"`
+
+### 5.3.2 布尔查询
+
+布尔查询是一个或多个查询子句的组合，每一个子句就是一个**子查询**。子查询的组合方式有：
+
+- must：必须匹配每个子查询，类似“与”
+- should：选择性匹配子查询，类似“或”
+- must_not：必须不匹配，**不参与算分**，类似“非”
+- filter：必须匹配，**不参与算分**
+
+示例：
+```json
+GET /hotel/_search
+{
+  "query": {
+    "bool": {
+      "must": [
+        {"term": {"city": "上海" }}
+      ],
+      "should": [
+        {"term": {"brand": "皇冠假日" }},
+        {"term": {"brand": "华美达" }}
+      ],
+      "must_not": [
+        { "range": { "price": { "lte": 500 } }}
+      ],
+      "filter": [
+        { "range": {"score": { "gte": 45 } }}
+      ]
+    }
+  }
+}
+```
+
+# 6. 结果文档处理
+
+## 6.1 排序
+
+> ES默认是根据相关度算分（_score）来排序，但是也支持自定义方式对搜索 [结果排序](https://www.elastic.co/guide/en/elasticsearch/reference/current/sort-search-results.html) 。
+> 可以排序字段类型有：keyword类型、数值类型、地理坐标类型、日期类型等。
+
+### 6.1.1 普通字段
+
+```json
+GET /indexName/_search
+{
+  "query": {
+    "match_all": {}
+  },
+  "sort": [
+    {
+      "FIELD": "desc"  // 排序字段、排序方式ASC、DESC
+    }
+  ]
+}
+```
+
+### 6.1.2 地理坐标排序
+```json
+GET /indexName/_search
+{
+  "query": {
+    "match_all": {}
+  },
+  "sort": [
+    {
+      "_geo_distance" : {
+          "FIELD" : "纬度，经度", // 文档中geo_point类型的字段名、目标坐标点
+          "order" : "asc", // 排序方式
+          "unit" : "km" // 排序的距离单位
+      }
+    }
+  ]
+}
+```
+
+## 6.2 分页
+
+> ES 默认情况下只返回top10的数据。而如果要查询更多数据就需要修改分页参数.
+
+```json
+GET /indexName/_search
+{
+  "query": {
+    "match_all": {}
+  },
+  "from": 0, // 分页开始的位置，默认为0
+  "size": 10, // 期望获取的文档总数
+  "sort": [...]
+}
+```
+
+> ES的分页存在问题，例如查询990~1000的数据，此时ES会查询前1000条数据，然后返回。如果是集群，多个节点都查询前1000条数据，然后再集中再返回。
+> 由此可看ES的深度分页是很糟糕的。官方给了以下建议即解决方案：
+
+- `from + size`：
+  - 优点：支持随机翻页
+  - 缺点：深度分页问题，默认查询上限（from + size）是10000
+  - 场景：百度、京东、谷歌、淘宝这样的随机翻页搜索
+- `after search`：
+  - 优点：没有查询上限（单次查询的size不超过10000）
+  - 缺点：只能向后逐页查询，不支持随机翻页
+  - 场景：没有随机翻页需求的搜索，例如手机向下滚动翻页
+- `scroll`：
+  - 优点：没有查询上限（单次查询的size不超过10000）
+  - 缺点：会有额外内存消耗，并且搜索结果是非实时的
+  - 场景：海量数据的获取和迁移。从ES7.1开始不推荐，建议用 after search方案。
+
+### 6.2.1 search after
+
+示例
+```json
+// 查询第一页，每页三个值
+GET /mall/_search
+{
+  "query": {
+    "match_all": {}
+  },
+  "sort": [
+    {
+      "score": {
+        "order": "desc"
+      }
+    }
+  ],
+  "from": 0,
+  "size": 3
+}
+```
+
+以上查询结果：
+```json
+{
+  "took" : 0,
+  "timed_out" : false,
+  "_shards" : {
+    "total" : 1,
+    "successful" : 1,
+    "skipped" : 0,
+    "failed" : 0
+  },
+  "hits" : {
+    "total" : {
+      "value" : 11,
+      "relation" : "eq"
+    },
+    "max_score" : null,
+    "hits" : [
+      {
+        "_index" : "mall",
+        "_type" : "_doc",
+        "_id" : "10",
+        "_score" : null,
+        "_source" : {
+          "id" : 10,
+          "name" : "如家豪华酒店9",
+          "address" : "上海市浦东新区9",
+          "price" : 598.9,
+          "score" : 9,
+          "brand" : "如家9",
+          "city" : "上海9"
+        },
+        "sort" : [
+          9
+        ]
+      },
+      {
+        "_index" : "mall",
+        "_type" : "_doc",
+        "_id" : "9",
+        "_score" : null,
+        "_source" : {
+          "id" : 9,
+          "name" : "如家豪华酒店8",
+          "address" : "上海市浦东新区8",
+          "price" : 597.9,
+          "score" : 8,
+          "brand" : "如家8",
+          "city" : "上海8"
+        },
+        "sort" : [
+          8
+        ]
+      },
+      {
+        "_index" : "mall",
+        "_type" : "_doc",
+        "_id" : "1234",
+        "_score" : null,
+        "_source" : {
+          "id" : 1234,
+          "name" : "如家豪华酒店",
+          "address" : "上海市浦东新区",
+          "price" : 589.0,
+          "score" : 8,
+          "brand" : "如家",
+          "city" : "上海"
+        },
+        "sort" : [
+          8
+        ]
+      }
+    ]
+  }
+}
+```
+
+查询下一页：
+```json
+GET /mall/_search
+{
+  "query": {
+    "match_all": {}
+  },
+  // 指定上一页排序后最后的值
+  "search_after": [
+    8
+  ],
+  "sort": [
+    {
+      "score": {
+        "order": "desc"
+      }
+    }
+  ],
+  // 无需form值，直接指定个数即可
+  "size": 3
+}
+```
+
+## 6.3 高亮
+
+```json
+GET /hotel/_search
+{
+  "query": {
+    "match": {
+      "FIELD": "TEXT" // 查询条件，高亮一定要使用全文检索查询
+    }
+  },
+  "highlight": {
+    "fields": { // 指定要高亮的字段
+      "FIELD": {
+        "pre_tags": "<em>",  // 用来标记高亮字段的前置标签
+        "post_tags": "</em>" // 用来标记高亮字段的后置标签
+      }
+    }
+  }
+}
+```
+
+**注意：**
+- 高亮是对关键字高亮，因此**搜索条件必须带有关键字**，而不能是范围这样的查询。
+- 默认情况下，**高亮的字段，必须与搜索指定的字段一致**，否则无法高亮
+- 如果要对非搜索字段高亮，则需要添加一个属性：required_field_match=false
 
 
+# 7. RestApi查询
 
+## 7.1 Match
 
+```java
+public class SearchDocClientTest {
+    private RestHighLevelClient client;
 
+    @BeforeEach
+    void setUp() {
+        this.client = new RestHighLevelClient(RestClient.builder(
+                HttpHost.create("http://127.0.0.1:9200")
+        ));
+    }
 
+    @AfterEach
+    void tearDown() throws IOException {
+        this.client.close();
+    }
 
+    // match_all
+    @Test
+    public void searchAll() throws IOException {
+        SearchRequest searchRequest = new SearchRequest("mall");
+
+        searchRequest.source().query( QueryBuilders.matchAllQuery());
+
+        SearchResponse search = client.search(searchRequest, RequestOptions.DEFAULT);
+
+        System.out.println(search);
+    }
+}
+```
+
+`hits`：命中的结果
+- `total`：总条数，其中的value是具体的总条数值
+- `max_score`：所有结果中得分最高的文档的相关性算分
+- `hits`：搜索结果的文档数组，其中的每个文档都是一个json对象
+  - `_source`：文档中的原始数据，也是json对象
+
+```java
+// match
+@Test
+void testMatch() throws IOException {
+    // 1.准备Request
+    SearchRequest request = new SearchRequest("mall");
+    // 2.准备DSL
+    request.source()
+            .query(QueryBuilders.matchQuery("all", "如家"));
+    // 3.发送请求
+    SearchResponse response = client.search(request, RequestOptions.DEFAULT);
+    // 4.解析响应
+    System.out.println(response);
+
+}
+```
