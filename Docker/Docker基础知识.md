@@ -192,7 +192,7 @@ ENTRYPOINT java -jar /tmp/app.jar
 
 # 6. Docker-Compose
 
-> Docker Compose就是一个文本文件，而无需手动一个个创建和运行容器！Compose就是一个文本文件。
+> Docker Compose就是一个文件，而无需手动一个个创建和运行容器。
 
 语法参考官网：[官网](https://docs.docker.com/compose/compose-file/)
 
