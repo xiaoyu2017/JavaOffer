@@ -16,7 +16,92 @@
 
 # 2. 安装
 
+## 2.1 单机安装
+
 见CSDN博客：[安装ES和Kibana](https://blog.csdn.net/boling_cavalry/article/details/125196035)
+
+## 2.2 集群安装
+
+> 部署es集群可以直接使用docker-compose来完成
+
+docker-compose文件:
+```yaml
+version: '2.2'
+
+services:
+  es01:
+    image: elasticsearch:7.17.7
+    container_name: es01
+    environment:
+      - node.name=es01
+      - cluster.name=es-docker-cluster
+      - discovery.seed_hosts=es02,es03
+      - cluster.initial_master_nodes=es01,es02,es03
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes: 
+      - /Users/yujiangzhong/DockerData/EsCluster/es01/data:/usr/share/elasticsearch/data
+      - /Users/yujiangzhong/DockerData/EsCluster/es01/plugin:/usr/share/elasticsearch/plugins
+    ports:
+      - 9201:9200
+    networks:
+      - elastic
+  es02:
+    image: elasticsearch:7.17.7
+    container_name: es02
+    environment:
+      - node.name=es02
+      - cluster.name=es-docker-cluster
+      - discovery.seed_hosts=es01,es03
+      - cluster.initial_master_nodes=es01,es02,es03
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      - /Users/yujiangzhong/DockerData/EsCluster/es02/data:/usr/share/elasticsearch/data
+      - /Users/yujiangzhong/DockerData/EsCluster/es02/plugin:/usr/share/elasticsearch/plugins
+    ports:
+      - 9202:9200
+    networks:
+      - elastic
+  es03:
+    image: elasticsearch:7.17.7
+    container_name: es03
+    environment:
+      - node.name=es03
+      - cluster.name=es-docker-cluster
+      - discovery.seed_hosts=es01,es02
+      - cluster.initial_master_nodes=es01,es02,es03
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      - /Users/yujiangzhong/DockerData/EsCluster/es03/data:/usr/share/elasticsearch/data
+      - /Users/yujiangzhong/DockerData/EsCluster/es03/plugin:/usr/share/elasticsearch/plugins
+    networks:
+      - elastic
+    ports:
+      - 9203:9200
+
+networks:
+  elastic:
+    driver: bridge
+```
+
+文件目录执行：`docker-compose buid -d`等待启动即可
+
+**kibana对集群不是太友好，官网推荐：** [Cerebro](https://github.com/lmenezes/cerebro)
+
+设置分片和副本数：
+```json
+PUT /itcast
+{
+  "settings": {
+    "number_of_shards": 3, // 分片数量
+    "number_of_replicas": 1 // 副本数量
+  },
+  "mappings": {
+    "properties": {
+      // mapping映射定义 ...
+    }
+  }
+}
+```
 
 # 3. 数据定义操作
 
@@ -1207,60 +1292,325 @@ GET /hotel/_search
 - 默认情况下，**高亮的字段，必须与搜索指定的字段一致**，否则无法高亮
 - 如果要对非搜索字段高亮，则需要添加一个属性：required_field_match=false
 
+# 7. 数据聚合
 
-# 7. RestApi查询
+> 数据聚合是快速实现数据统计、分析和运算。
 
-## 7.1 Match
+聚合主要分三种：
 
-```java
-public class SearchDocClientTest {
-    private RestHighLevelClient client;
+- **桶（Bucket）**聚合：用来对文档做分组
+  - TermAggregation：按照文档字段值分组，例如按照品牌值分组、按照国家分组
+  - Date Histogram：按照日期阶梯分组，例如一周为一组，或者一月为一组
+- **度量（Metric）**聚合：用以计算一些值，比如：最大值、最小值、平均值等
+  - Avg：求平均值
+  - Max：求最大值
+  - Min：求最小值
+  - Stats：同时求max、min、avg、sum等
+- **管道（pipeline）**聚合：其它聚合的结果为基础做聚合
 
-    @BeforeEach
-    void setUp() {
-        this.client = new RestHighLevelClient(RestClient.builder(
-                HttpHost.create("http://127.0.0.1:9200")
-        ));
+
+> **注意：**参加聚合的字段必须是keyword、日期、数值、布尔类型
+
+
+## 7.1 Bucket聚合
+
+### 7.1.1 聚合
+语法：
+```json
+GET /hotel/_search
+{
+  "size": 0,  // 设置size为0，结果中不包含文档，只包含聚合结果
+  "aggs": { // 定义聚合
+    "brandAgg": { //给聚合起个名字
+      "terms": { // 聚合的类型，按照品牌值聚合，所以选择term
+        "field": "brand", // 参与聚合的字段
+        "size": 20 // 希望获取的聚合结果数量
+      }
     }
-
-    @AfterEach
-    void tearDown() throws IOException {
-        this.client.close();
-    }
-
-    // match_all
-    @Test
-    public void searchAll() throws IOException {
-        SearchRequest searchRequest = new SearchRequest("mall");
-
-        searchRequest.source().query( QueryBuilders.matchAllQuery());
-
-        SearchResponse search = client.search(searchRequest, RequestOptions.DEFAULT);
-
-        System.out.println(search);
-    }
+  }
 }
 ```
 
-`hits`：命中的结果
-- `total`：总条数，其中的value是具体的总条数值
-- `max_score`：所有结果中得分最高的文档的相关性算分
-- `hits`：搜索结果的文档数组，其中的每个文档都是一个json对象
-  - `_source`：文档中的原始数据，也是json对象
+### 7.1.2 结果排序
 
-```java
-// match
-@Test
-void testMatch() throws IOException {
-    // 1.准备Request
-    SearchRequest request = new SearchRequest("mall");
-    // 2.准备DSL
-    request.source()
-            .query(QueryBuilders.matchQuery("all", "如家"));
-    // 3.发送请求
-    SearchResponse response = client.search(request, RequestOptions.DEFAULT);
-    // 4.解析响应
-    System.out.println(response);
+> 默认情况下，Bucket聚合会统计Bucket内的文档数量，记为_count，并且按照_count降序排序.
 
+```json
+GET /hotel/_search
+{
+  "size": 0, 
+  "aggs": {
+    "brandAgg": {
+      "terms": {
+        "field": "brand",
+        "order": {
+          "_count": "asc" // 按照_count升序排列
+        },
+        "size": 20
+      }
+    }
+  }
 }
 ```
+
+### 7.1.3 结果范文筛选
+
+```json
+GET /hotel/_search
+{
+  "query": {
+    "range": {
+      "price": {
+        "lte": 200 // 只对200元以下的文档聚合
+      }
+    }
+  }, 
+  "size": 0, 
+  "aggs": {
+    "brandAgg": {
+      "terms": {
+        "field": "brand",
+        "size": 20
+      }
+    }
+  }
+}
+```
+
+### 7.1.4 Metric聚合语法
+
+```json
+GET /hotel/_search
+{
+  "size": 0, 
+  "aggs": {
+    "brandAgg": { 
+      "terms": { 
+        "field": "brand", 
+        "size": 20
+      },
+      "aggs": { // 是brands聚合的子聚合，也就是分组后对每组分别计算
+        "score_stats": { // 聚合名称
+          "stats": { // 聚合类型，这里stats可以计算min、max、avg等
+            "field": "score" // 聚合字段，这里是score
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+## 7.2 自动补全
+
+> 当用户输入拼音字母时，输入框会自动补全。 [自动补全插件](https://github.com/medcl/elasticsearch-analysis-pinyin)
+
+```json
+// 测试pinyin插件
+POST /_analyze
+{
+  "text": "世界属于三体",
+  "analyzer": "pinyin"
+}
+```
+
+### 7.2.1 自定义分词器
+
+elasticsearch中分词器（analyzer）的组成包含三部分：
+
+- character filters：在tokenizer之前对文本进行处理。例如删除字符、替换字符
+- tokenizer：将文本按照一定的规则切割成词条（term）。例如keyword，就是不分词；还有ik_smart
+- tokenizer filter：将tokenizer输出的词条做进一步处理。例如大小写转换、同义词处理、拼音处理等
+
+![](../../../img/es3.png)
+
+```json
+PUT /test
+{
+  "settings": {
+    "analysis": {
+      "analyzer": { // 自定义分词器
+        "my_analyzer": {  // 分词器名称
+          "tokenizer": "ik_max_word",
+          "filter": "py"
+        }
+      },
+      "filter": { // 自定义tokenizer filter
+        "py": { // 过滤器名称
+          "type": "pinyin", // 过滤器类型，这里是pinyin
+		  "keep_full_pinyin": false,
+          "keep_joined_full_pinyin": true,
+          "keep_original": true,
+          "limit_first_letter_length": 16,
+          "remove_duplicated_term": true,
+          "none_chinese_pinyin_tokenize": false
+        }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "name": {
+        "type": "text",
+        "analyzer": "my_analyzer",
+        "search_analyzer": "ik_smart"
+      }
+    }
+  }
+}
+```
+
+测试：
+```json
+POST /_analyze
+{
+  "text": "三体黑暗森林",
+  "analyzer": "my_analyzer"
+}
+```
+
+### 7.2.2 自动补全查询
+
+- 参与补全查询的字段必须是completion类型。
+- 字段的内容一般是用来补全的多个词条形成的数组。
+
+
+```json
+// 创建索引库
+PUT /test
+{
+  "mappings": {
+    "properties": {
+      "title":{
+        "type": "completion"
+      }
+    }
+  }
+}
+```
+```json
+// 新增文档
+POST test/_doc
+{
+  "title": ["Sony", "WH-1000XM3"]
+}
+POST test/_doc
+{
+  "title": ["SK-II", "PITERA"]
+}
+POST test/_doc
+{
+  "title": ["Nintendo", "switch"]
+}
+```
+```json
+// 补全查询
+GET /test/_search
+{
+  "suggest": {
+    "title_suggest": {
+      "text": "s",
+      "completion": {
+        "field": "title",
+        "skip_duplicates": true,
+        "size": 10
+      }
+    }
+  }
+}
+```
+
+# 8. 数据同步
+
+> elasticsearch中的酒店数据来自于mysql数据库，因此mysql数据发生改变时，elasticsearch也必须跟着改变，这个就是elasticsearch与mysql之间的**数据同步**。
+
+常见三种方式：
+1. 同步调用
+![](../../../img/es4.png)
+
+2. 异步通知
+![](../../../img/es5.png)
+
+
+3. 监听binlog
+![](../../../img/es6.png)
+
+# 9. 集群
+
+## 9.1 分片备份
+
+单机的elasticsearch做数据存储，必然面临两个问题：海量数据存储问题、单点故障问题。
+
+- 海量数据存储问题：将索引库从逻辑上拆分为N个分片（shard），存储到多个节点
+- 单点故障问题：将分片数据在不同节点备份（replica ）
+
+相关概念：
+* 集群（cluster）：一组拥有共同的 cluster name 的 节点。
+* <font color="red">节点（node)</font>   ：集群中的一个 Elasticearch 实例
+* <font color="red">分片（shard）</font>：索引可以被拆分为不同的部分进行存储，称为分片。在集群环境下，一个索引的不同分片可以拆分到不同的节点中
+
+![](../../../img/es7.png)
+
+* 主分片（Primary shard）：相对于副本分片的定义。
+* 副本分片（Replica shard）每个主分片可以有一个或者多个副本，数据和主分片一样。
+
+> 如果每个分片在所有节点备份，就会导致节点会翻倍，可以采用在相会节点进行备份。
+
+![](../../../img/es8.png)
+
+## 9.2 脑裂问题
+
+集群中不同节点职责划分：
+
+![](../../../img/es9.png)
+
+- master节点：对CPU要求高，但是内存要求第
+- data节点：对CPU和内存要求都高
+- coordinating节点：对网络带宽、CPU要求高
+
+
+脑裂问题描述：
+- 集群中存在三个eligible节点，n1,n2,n3，n1为主节点。
+- n1宕机，与n2，n3失联。此时n2,n3重新选举，选n3节点为主节点。
+- n1恢复又重新加入集群中，此时存在两个主节点，被称之为脑裂。
+
+脑裂问题解决：
+只有选票超过`(eligible节点数+1)/2`才能是主节点，所以一般eligible节点配置都为奇数。对应的配置`discovery.zen.minimum_master_nodes`，es7之后默认配置。
+
+## 9.3 存储数据分片选择
+
+![](../../../img/es10.png)
+
+**注意：**
+- _routing默认是文档的id
+- 算法与分片数量有关，因此索引库一旦创建，分片数量不能修改！
+
+存储数据过程：
+![](../../../img/es12.png)
+
+
+## 9.4 集群分布式查询
+
+elasticsearch的查询分成两个阶段：
+
+- scatter phase：分散阶段，coordinating node会把请求分发到每一个分片
+- gather phase：聚集阶段，coordinating node汇总data node的搜索结果，并处理为最终结果集返回给用户
+
+## 9.5 故障转移
+
+当主节点出现宕机，es集群会立即重新选主。选主成功后会判断哪些分片不存在备份，然后把它们分片进行备份。
+
+![](../../../img/es11.png)
+
+![](../../../img/es13.png)
+
+![](../../../img/es14.png)
+
+
+
+
+
+
+
+
+
