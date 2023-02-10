@@ -235,7 +235,9 @@ public interface OrderClient {
 ```
 
 ### 3.1.3 装配处理类
+
 ```java
+
 @Configuration
 public class SentinelConfig {
     @Bean
@@ -246,4 +248,275 @@ public class SentinelConfig {
 ```
 
 > 重启项目再访问查询，就可以在控制台上查看到新的簇点链路。
+
+## 3.2 隔离
+
+线程隔离有两种方式实现：
+
+- 线程池隔离
+- 信号量隔离（Sentinel默认采用）
+
+**线程池隔离**：给每个服务调用业务分配一个线程池，利用线程池本身实现隔离效果。
+
+**信号量隔离**：不创建线程池，而是计数器模式，记录业务使用的线程数量，达到信号量上限时，禁止新的请求。
+
+![](../../../../img/sentinel10.png)
+
+## 3.3 熔断降级
+
+> 熔断降级是解决雪崩问题的重要手段。其思路是由**断路器**统计服务调用的异常比例、慢请求比例，如果超出阈值则会**熔断**该服务。即拦截访问该服务的一切请求；而当服务恢复时，断路器会放行访问该服务的请求。
+
+![](../../../../img/sentinel11.png)
+
+状态机包括三个状态：
+
+- closed：关闭状态，断路器放行所有请求，并开始统计异常比例、慢请求比例。超过阈值则切换到open状态
+- open：打开状态，服务调用被**熔断**，访问被熔断服务的请求会被拒绝，快速失败，直接走降级逻辑。Open状态5秒后会进入half-open状态
+- half-open：半开状态，放行一次请求，根据执行结果来判断接下来的操作。
+    - 请求成功：则切换到closed状态
+    - 请求失败：则切换到open状态
+
+断路器熔断策略有三种：慢调用、异常比例、异常数
+
+### 3.3.1 慢调用
+
+> **慢调用**：业务的响应时长（RT）大于指定时长的请求认定为慢调用请求。在指定时间内，如果请求数量超过设定的最小数量，慢调用比例大于设定的阈值，则触发熔断。
+
+![](../../../../img/sentinel13.png)
+
+### 3.3.1 异常比例和异常数
+
+> **异常比例或异常数**：统计指定时间内的调用，如果调用次数超过指定请求数，并且出现异常的比例达到设定的比例阈值（或超过指定异常数），则触发熔断。
+
+异常比例设置：
+![](../../../../img/sentinel12.png)
+
+异常数设置：
+![](../../../../img/sentinel14.png)
+
+# 4. 授权规则
+
+> 授权规则可以对请求方来源做判断和控制。
+
+授权规则可以对调用方的来源做控制，有白名单和黑名单两种方式。
+
+- 白名单：来源（origin）在白名单内的调用者允许访问
+- 黑名单：来源（origin）在黑名单内的调用者不允许访问
+
+![](../../../../img/sentinel15.png)
+
+- 资源名：就是受保护的资源，例如/order/{orderId}
+
+- 流控应用：是来源者的名单，
+    - 如果是勾选白名单，则名单中的来源被许可访问。
+    - 如果是勾选黑名单，则名单中的来源被禁止访问。
+
+![](../../../../img/sentinel16.png)
+
+我们允许请求从gateway到order-service，不允许浏览器访问order-service，那么白名单中就要填写**网关的来源名称（origin）**。
+
+1.编写判断授权规则
+
+```java
+// 在order微服务中
+@Component
+public class OrderWarrant implements RequestOriginParser {
+    @Override
+    public String parseOrigin(HttpServletRequest httpServletRequest) {
+        // 1.获取请求头
+        String origin = httpServletRequest.getHeader("origin");
+        // 2.非空判断
+        if (StringUtils.isEmpty(origin)) {
+            origin = "blank";
+        }
+        return origin;
+    }
+}
+```
+
+2.gateway配置请求头
+
+```yaml
+spring:
+  cloud:
+    gateway:
+      default-filters:
+        - AddRequestHeader=origin,gateway
+      routes:
+      # ...略
+```
+
+3.sentinel设置白名单
+![](../../../../img/sentinel17.png)
+![](../../../../img/sentinel18.png)
+
+# 5. 自定义异常结果
+
+> 默认情况下，发生限流、降级、授权拦截时，都会抛出异常到调用方。异常结果都是flow limmiting（限流）。这样不够友好，无法得知是限流还是降级还是授权拦截。
+
+自定义异常类需要实现一下类：
+
+```java
+public interface BlockExceptionHandler {
+    /**
+     * 处理请求被限流、降级、授权拦截时抛出的异常：BlockException
+     * e：被sentinel拦截时抛出的异常
+     */
+    void handle(HttpServletRequest request, HttpServletResponse response, BlockException e) throws Exception;
+}
+```
+
+异常子类：
+
+| **异常**             | **说明**           |
+| -------------------- | ------------------ |
+| FlowException        | 限流异常           |
+| ParamFlowException   | 热点参数限流的异常 |
+| DegradeException     | 降级异常           |
+| AuthorityException   | 授权规则异常       |
+| SystemBlockException | 系统规则异常       |
+
+在order微服务中:
+
+```java
+
+@Component
+public class SentinelExceptionHandler implements BlockExceptionHandler {
+    @Override
+    public void handle(HttpServletRequest request, HttpServletResponse response, BlockException e) throws Exception {
+        String msg = "未知异常";
+        int status = 429;
+
+        if (e instanceof FlowException) {
+            msg = "请求被限流了";
+        } else if (e instanceof ParamFlowException) {
+            msg = "请求被热点参数限流";
+        } else if (e instanceof DegradeException) {
+            msg = "请求被降级了";
+        } else if (e instanceof AuthorityException) {
+            msg = "没有权限访问";
+            status = 401;
+        }
+
+        response.setContentType("application/json;charset=utf-8");
+        response.setStatus(status);
+        response.getWriter().println("{\"msg\": " + msg + ", \"status\": " + status + "}");
+    }
+}
+```
+
+# 6. 规则持久化
+
+> sentinel的所有规则都是内存存储，重启后所有规则都会丢失。在生产环境下，我们必须确保这些规则的持久化，避免丢失。
+
+规则是否能持久化，取决于规则管理模式，sentinel支持三种规则管理模式：
+
+- 原始模式：Sentinel的默认模式，将规则保存在内存，重启服务会丢失。
+- pull模式
+- push模式
+
+## 6.1 pull模式
+
+> pull模式：控制台将配置的规则推送到Sentinel客户端，而客户端会将配置规则保存在本地文件或数据库中。以后会定时去本地文件或数据库中查询，更新本地规则。
+
+![](../../../../img/sentinel19.png)
+
+## 6.2 push模式
+
+> push模式：控制台将配置规则推送到远程配置中心，例如Nacos。Sentinel客户端监听Nacos，获取配置变更的推送消息，完成本地配置更新。
+
+![](../../../../img/sentinel01.png)
+
+## 6.3 持久化示例
+
+### 6.3.1 添加依赖
+
+在order微服务中
+
+```xml
+
+<dependency>
+    <groupId>com.alibaba.csp</groupId>
+    <artifactId>sentinel-datasource-nacos</artifactId>
+</dependency>
+```
+
+### 6.3.2 添加配置
+
+在order微服务中
+
+```yaml
+spring:
+  cloud:
+    sentinel:
+      datasource:
+        flow:
+          nacos:
+            server-addr: localhost:8848 # nacos地址
+            dataId: orderservice-flow-rules
+            groupId: SENTINEL_GROUP
+            rule-type: flow # 还可以是：degrade、authority、param-flow
+```
+
+### 6.3.3 修改sentinel源代码
+
+> SentinelDashboard默认不支持nacos的持久化，需要修改源码。
+
+1.在sentinel-dashboard源码的pom文件中，nacos的依赖默认的scope是test，只能在测试时使用，这里要去除
+
+![](../../../../img/sentinel02.png)
+
+```xml
+<!--修改后-->
+<dependency>
+    <groupId>com.alibaba.csp</groupId>
+    <artifactId>sentinel-datasource-nacos</artifactId>
+</dependency>
+```
+
+2.添加nacos支持
+
+> 在sentinel-dashboard的test包下，已经编写了对nacos的支持，我们需要将其拷贝到main下。
+
+![](../../../../img/sentinel03.png)
+
+3.修改nacos类 然后，还需要修改测试代码中的NacosConfig类：
+![](../../../../img/sentinel04.png)
+![](../../../../img/sentinel05.png)
+
+在sentinel-dashboard的application.properties中添加nacos地址配置：
+
+```properties
+nacos.addr=localhost:8848
+```
+
+4.配置nacos数据源
+![](../../../../img/sentinel06.png)
+![](../../../../img/sentinel07.png)
+
+5.修改前端页面
+
+![](../../../../img/sentinel08.png)
+放开注释：
+![](../../../../img/sentinel09.png)
+修改其中的文本：
+![](../../../../img/sentinel20.png)
+
+6.重新编译、打包项目
+![](../../../../img/sentinel21.png)
+
+7.启动
+
+启动方式跟官方一样：
+
+```sh
+java -jar sentinel-dashboard.jar
+```
+
+如果要修改nacos地址，需要添加参数：
+
+```sh
+java -jar -Dnacos.addr=localhost:8848 sentinel-dashboard.jar
+```
+
 
