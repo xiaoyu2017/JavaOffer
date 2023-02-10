@@ -24,6 +24,8 @@
 ## 1.3 初识Sentinel
 
 > Sentinel是阿里巴巴开源的一款微服务流量控制组件。 [官网地址](https://sentinelguard.io/zh-cn/index.html)
+>
+> 测试工具可以使用 [Apache Jmeter](https://jmeter.apache.org/download_jmeter.cgi)
 
 特征：
 
@@ -77,7 +79,8 @@ spring:
 
 ## 2.2 流量控制
 
-设置QPS：
+设置QPS：直连为默认方式
+
 ![](../../../../img/sentinel3.png)
 
 在添加限流规则时，点击高级选项，可以选择三种**流控模式**：
@@ -86,17 +89,161 @@ spring:
 - 关联：统计与当前资源相关的另一个资源，触发阈值时，对当前资源限流
 - 链路：统计从指定链路访问到本资源的请求，触发阈值时，对指定链路限流
 
+### 2.2.1 关联设置
 
+![](../../../../img/sentinel4.png)
 
+当对`/write`的访问量达到设置值，也会触发`/read`的流量限制。
 
+### 2.2.1 链路设置
 
+![](../../../../img/sentinel5.png)
 
+`/test1`和`/test2`同时访问`/common`，现在只限制`/test2`发过来的请求。
 
+**当不是远程调用时，sentinel是无法统计被调用的service方法的，这时需要手动添加资源**
 
+```java
+public class CommonServiceImpl implements CommonService {
+    // 手动添加资源
+    @SentinelResource("common")
+    public void queryGoods() {
+        System.err.println("查询商品");
+    }
+}
+```
 
+**sentinel默认为进入SpringMvc所有请求都设置了相同的root资源，这样会导致链路模式失效，通过以下配置修改**
 
+```yaml
+spring:
+  cloud:
+    sentinel:
+      web-context-unify: false # 关闭context整合
+```
 
+## 2.3 控流效果
 
+在高级选项中包括以下三个选项:
 
+- 快速失败：达到阈值后，新的请求会被立即拒绝并抛出FlowException异常。是默认的处理方式。
+- warm up：预热模式，对超出阈值的请求同样是拒绝并抛出异常。但这种模式阈值会动态变化，从一个较小值逐渐增加到最大阈值。
+- 排队等待：让所有的请求按照先后次序排队执行，两个请求的间隔不能小于指定时长
 
+### 2.3.1 warm up
+
+阈值一般是一个微服务能承担的最大QPS，但是一个服务刚刚启动时，一切资源尚未初始化（**冷启动**），如果直接将QPS跑到最大值，可能导致服务瞬间宕机。
+
+warm up也叫**预热模式**，是应对服务冷启动的一种方案。请求阈值初始值是`maxThreshold / coldFactor`，持续指定时长后，逐渐提高到maxThreshold值。而coldFactor的默认值是3.
+
+例如，我设置QPS的maxThreshold为10，预热时间为5秒，那么初始阈值就是 10 / 3 ，也就是3，然后在5秒后逐渐增长到10.
+
+### 2.3.2 排队等待
+
+> 排队等待则是让所有请求进入一个队列中，然后按照阈值允许的时间间隔依次执行。后来的请求必须等待前面执行完成，如果请求预期的等待时间超出最大时长，则会被拒绝。
+
+工作原理:
+
+例如：QPS = 5，意味着每200ms处理一个队列中的请求；timeout = 2000，意味着**预期等待时长**超过2000ms的请求会被拒绝并抛出异常。
+
+那什么叫做预期等待时长呢？
+
+比如现在一下子来了12 个请求，因为每200ms执行一个请求，那么：
+
+- 第6个请求的**预期等待时长** = 200 * （6 - 1） = 1000ms
+- 第12个请求的预期等待时长 = 200 * （12-1） = 2200ms
+
+## 2.4 热点参数限流
+
+> 之前的限流是统计访问某个资源的所有请求，判断是否超过QPS阈值。而热点参数限流是**分别统计参数值相同的请求**，判断是否超过QPS阈值。
+
+例如根据订单id进行查询：请求的每次连接不同
+
+![](../../../../img/sentinel6.png)
+
+示例：
+
+```java
+public class OrderController {
+    @Autowired
+    OrderService orderService;
+
+    // 标记这是一个热点请求
+    @SentinelResource("hot")
+    @GetMapping("/order/{id}")
+    public Order getOrderById(@PathVariable long id) {
+        return orderService.queryOrderById(id);
+    }
+}
+```
+
+![](../../../../img/sentinel7.png)
+
+# 3. 隔离和降级
+
+> 限流是一种预防措施，虽然限流可以尽量避免因高并发而引起的服务故障，但服务还会因为其它原因而故障。而要将这些故障控制在一定范围，
+> 避免雪崩，就要靠**线程隔离**（舱壁模式）和**熔断降级**手段
+
+**线程隔离**：调用者在调用服务提供者时，给每个调用的请求分配独立线程池，出现故障时，最多消耗这个线程池内资源，避免把调用者的所有资源耗尽。
+![](../../../../img/sentinel8.png)
+**熔断降级**：是在调用方这边加入断路器，统计对服务提供者的调用，如果调用的失败比例过高，则熔断该业务，不允许访问该服务的提供者了。
+![](../../../../img/sentinel9.png)
+
+## 3.1 Sentinel整合Feign
+
+### 3.1.1 添加配置
+
+```yaml
+feign:
+  sentinel:
+    enabled: true # 开启feign对sentinel的支持
+```
+
+### 3.1.2 失败处理类
+
+给FeignClient编写失败后的降级逻辑
+
+- 方式一：FallbackClass，无法对远程调用的异常做处理
+- 方式二：FallbackFactory，可以对远程调用的异常做处理，我们选择这种
+
+```java
+// 异常处理类
+@Slf4j
+public class OrderFallbackFactory implements FallbackFactory<OrderClient> {
+    @Override
+    public OrderClient create(Throwable cause) {
+        return id -> {
+            log.error("查询订单异常", cause);
+            return new Order();
+        };
+    }
+}
+
+// feign客户端添加降级处理方式
+@FeignClient(value = "mall-order", fallbackFactory = OrderFallbackFactory.class)
+public interface OrderClient {
+
+    /**
+     * 通过user id获得user信息
+     *
+     * @param id id
+     * @return User
+     */
+    @GetMapping("/order/{id}")
+    Order findById(@PathVariable("id") long id);
+}
+```
+
+### 3.1.3 装配处理类
+```java
+@Configuration
+public class SentinelConfig {
+    @Bean
+    public OrderFallbackFactory orderFallbackFactory() {
+        return new OrderFallbackFactory();
+    }
+}
+```
+
+> 重启项目再访问查询，就可以在控制台上查看到新的簇点链路。
 
