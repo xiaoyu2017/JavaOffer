@@ -11,13 +11,13 @@
             resource：被引用文件名称
     -->
     <properties resource="jdbc.properties"/>
-    
+
     <!--mybatis的全局配置信息-->
     <settings>
         <!--是否开启驼峰命名自动映射（默认关闭）-->
         <setting name="mapUnderscoreToCamelCase" value="true"/>
     </settings>
-    
+
     <!--
         类型别名，不需要直接使用全类名，
         别名不区分大小写
@@ -86,7 +86,7 @@
 2. 接口中的方法名和mapper中的id相同
 
 ```java
-public interface UserMapper{
+public interface UserMapper {
     int addUser(User user);
 }
 ```
@@ -102,11 +102,11 @@ public interface UserMapper{
 ```
 
 # 3. mapper查询
-需要设置resultType或resultMap
-resultType：字段与数据库相同，直接使用bean
-resultMap：字段与数据库列不相同，需要单独处理
+
+需要设置resultType或resultMap resultType：字段与数据库相同，直接使用bean resultMap：字段与数据库列不相同，需要单独处理
 
 # 4. 获得参数值
+
 1. `${}`:直接sql拼接
 2. `#{}`:占位符拼接
 
@@ -114,16 +114,23 @@ resultMap：字段与数据库列不相同，需要单独处理
 
 `User findById(Integer id)`
 
-
 `${}`：需要添加双引号,值可以随便写，不受影响
 `#{}`:值随便写，不受影响，占位符
 
 ```sql
-select * from user where id = '${id}'；
-select * from user where id = '1'；
+select *
+from user
+where id = '${id}'；
+select *
+from user
+where id = '1'；
 
-select * from user where id = #{xxx}；
-select * from user where id = '1'；
+select *
+from user
+where id = #{xxx}；
+select *
+from user
+where id = '1'；
 ```
 
 ## 4.2 传入多个字面量值
@@ -133,7 +140,10 @@ select * from user where id = '1'；
 `#{}`和`${}`：在获得多个值时，mybatis会自动将参数放在map集合中，两种方式存储，arg0，arg1...或param1,param2...两种方式都行，可混用
 
 ```sql
-select * from user where name = #{arg0} and password = #{param2}
+select *
+from user
+where name = #{arg0}
+  and password = #{param2}
 ```
 
 ## 4.3 传入Map集合参数
@@ -143,13 +153,16 @@ select * from user where name = #{arg0} and password = #{param2}
 `#{}`和`${}`：在获得值时可以直接通过key获得值
 
 ```java
-Map<String, String> map = new HashMap<>();
-map.put("name","fish");
-map.put("password","fish123");
+Map<String, String> map=new HashMap<>();
+        map.put("name","fish");
+        map.put("password","fish123");
 ```
 
 ```sql
-select * from user where name = #{name} and password = #{password}
+select *
+from user
+where name = #{name}
+  and password = #{password}
 ```
 
 ## 4.4 传入实体类对象
@@ -167,17 +180,21 @@ select * from user where name = #{name} and password = #{password}
 `#{}`和`${}`使用时直接将name和password放在大括号中即可。也可以使用param1，param2...来使用。
 
 # 5. 返回值
+
 ## 5.1 返回多条记录
+
 需要使用集合来接收
 
 `List<User> getAllUser()`
 
 ## 5.2 聚合查询
+
 统计数量
 
 `int count()`
 
 ```xml
+
 <select id="count" resultMap="int">
     select count(1) from user;
 </select>
@@ -185,46 +202,54 @@ select * from user where name = #{name} and password = #{password}
 
 > 基础数据类型，mybatis提供了默认的类型别名
 
-
 ## 5.3 @Mapkey("字段名")
 
 使用map直接接收多条信息，指定map的key
 
 ```java
 @Mapkey("id")
-Map<Integer,Object> getAllUser();
+Map<Integer, Object> getAllUser();
 ```
 
 # 6. 模糊查询
+
 1. 使用`${}`进行模糊查询
 
 ```sql
-select * from user where name like '%${name}%'
+select *
+from user
+where name like '%${name}%'
 ```
 
 2. 使用`#{}`加count()函数进行拼接
+
 ```sql
-select * from user where name like concat('%',#{name},'%');
+select *
+from user
+where name like concat('%', #{name}, '%');
 ```
 
-3.  使用`#{}`加双引号函数进行拼接
-```sql
-select * from user where name like "%"#{name}"%";
-```
+3. 使用`#{}`加双引号函数进行拼接
 
+```sql
+select *
+from user
+where name like "%"#{name}"%";
+```
 
 # 6. 批量删除
+
 > 使用in，将条件拼接后当参数传递sql中执行
 
 `int deletes(@Param("ides")String ids)`
 
 ```sql
-select * from user where id in (${ids})
+select *
+from user
+where id in (${ids})
 ```
 
 **不能使用`#{}`只能使用`${}`这种才能进行删除，主要原因是`#{}`会自动添加引号**
-
-
 
 # 7. 新增获得自增主键
 
@@ -251,16 +276,16 @@ select * from user where id in (${ids})
 ```xml
 <!--解决类字段和表列不相同问题<别名加代码片段（只用别名s也可以）>-->
 <sql id="userSql">
-        id, createTime, updateTime, status, sort, nick_name as nickName, name, password, icon, email,
-company_name as companyName, sex, birthday, code, role
+    id, createTime, updateTime, status, sort, nick_name as nickName, name, password, icon, email,
+    company_name as companyName, sex, birthday, code, role
 </sql>
-<!--处理类字段和表列不相同问题<resultMap>-->
+        <!--处理类字段和表列不相同问题<resultMap>-->
 <select id="selectById" resultType="User">
-    select
-    <include refid="userSql"/>
-    from user
-    where id = #{id}
-    and status = 1;
+select
+<include refid="userSql"/>
+from user
+where id = #{id}
+and status = 1;
 </select>
 ```
 
@@ -283,17 +308,19 @@ company_name as companyName, sex, birthday, code, role
     <result property="nickName" column="nick_name"/>
 </resultMap>
 
-<!--
-    resultMap：返回映射唯一id
--->
+        <!--
+            resultMap：返回映射唯一id
+        -->
 <select id="selectAll" resultMap="userResult">
-    select *
-    from user;
+select *
+from user;
 </select>
 ```
 
 # 9 多表对应
+
 准备内容：
+
 ```java
 class Emp {
     private Integer id;
@@ -305,7 +332,7 @@ class Emp {
     //...
 }
 
-class Dept{
+class Dept {
     private Integer did;
     private String name;
     //...
@@ -319,7 +346,7 @@ class Dept{
 ```xml
 <!--解决类字段和表列不相同问题<resultMap>-->
 <resultMap id="empManyOne" type="Emp">
-    <id property="id" column="id" />
+    <id property="id" column="id"/>
     <result property="empName" column="emp_name"/>
     <result property="age" column="age"/>
     <result property="sex" column="sex"/>
@@ -329,11 +356,11 @@ class Dept{
     <!--级联属性-->
     <result property="dept.name" column="name"/>
 </resultMap>
-<!--
-    resultMap：返回映射唯一id
--->
+        <!--
+            resultMap：返回映射唯一id
+        -->
 <select id="selectAll" resultMap="empManyOne">
-    select * from emp e left join dept d on e.did = d.did where e.id = #{id};
+select * from emp e left join dept d on e.did = d.did where e.id = #{id};
 </select>
 ```
 
@@ -342,7 +369,7 @@ class Dept{
 ```xml
 <!--解决类字段和表列不相同问题<resultMap>-->
 <resultMap id="empManyOne" type="Emp">
-    <id property="id" column="id" />
+    <id property="id" column="id"/>
     <result property="empName" column="emp_name"/>
     <result property="age" column="age"/>
     <result property="sex" column="sex"/>
@@ -353,17 +380,18 @@ class Dept{
         <result property="name" column="name"/>
     </association>
 </resultMap>
-<!--
-    resultMap：返回映射唯一id
--->
+        <!--
+            resultMap：返回映射唯一id
+        -->
 <select id="selectAll" resultMap="empManyOne">
-    select * from emp e left join dept d on e.did = d.did where e.id = #{id};
+select * from emp e left join dept d on e.did = d.did where e.id = #{id};
 </select>
 ```
 
 3. 分步查询
 
 ```xml
+
 <mapper namespace="DeptMapper">
     <select id="findByDid" resultType="Dept">
         select * from dept where did = #{did}
@@ -374,7 +402,7 @@ class Dept{
 ```xml
 <!--解决类字段和表列不相同问题<resultMap>-->
 <resultMap id="empManyOne" type="Emp">
-    <id property="id" column="id" />
+    <id property="id" column="id"/>
     <result property="empName" column="emp_name"/>
     <result property="age" column="age"/>
     <result property="sex" column="sex"/>
@@ -387,16 +415,17 @@ class Dept{
     -->
     <association property="dept" select="DeptMapper.findByDid" column="did" fetchType="lazy"/>
 </resultMap>
-<!--
-    resultMap：返回映射唯一id
--->
+        <!--
+            resultMap：返回映射唯一id
+        -->
 <select id="selectAll" resultMap="empManyOne">
-    select * from emp where id = #{id};
+select * from emp where id = #{id};
 </select>
 ```
 
 **分布查询是可以懒加载，当不访问响应属性是不直接访问的。**
 懒加载是需要全局配置的：
+
 ```xml
 <!--mybatis的全局配置信息-->
 <settings>
@@ -406,7 +435,9 @@ class Dept{
 ```
 
 ## 9.2 一对多
+
 准备内容：
+
 ```java
 class Emp {
     private Integer id;
@@ -417,7 +448,7 @@ class Emp {
     //...
 }
 
-class Dept{
+class Dept {
     private Integer did;
     private String name;
     private List<Emp> emps;
@@ -430,27 +461,28 @@ class Dept{
 ```xml
 <!--解决类字段和表列不相同问题<resultMap>-->
 <resultMap id="deptManyOne" type="Dept">
-    <id property="did" column="did" />
+    <id property="did" column="did"/>
     <result property="name" column="name"/>
     <collection property="emps" ofType="Emp">
-        <id property="id" column="id" />
+        <id property="id" column="id"/>
         <result property="empName" column="emp_name"/>
         <result property="age" column="age"/>
         <result property="sex" column="sex"/>
         <result property="email" column="email"/>
     </collection>
 </resultMap>
-<!--
-    resultMap：返回映射唯一id
--->
+        <!--
+            resultMap：返回映射唯一id
+        -->
 <select id="selectAll" resultMap="deptManyOne">
-    select * from dept d left join emp e on d.did = e.did where did = #{did};
+select * from dept d left join emp e on d.did = e.did where did = #{did};
 </select>
 ```
 
 2. collection分步查询
 
 ```xml
+
 <mapper namespace="EmpMapper">
     <select id="getAllByDid" resultType="Emp">
         select * from emp where did = #{did}
@@ -461,18 +493,18 @@ class Dept{
 ```xml
 <!--解决类字段和表列不相同问题<resultMap>-->
 <resultMap id="deptManyOne" type="Dept">
-    <id property="did" column="did" />
+    <id property="did" column="did"/>
     <result property="name" column="name"/>
     <!--
         分布查询：也可以开启懒加载
     -->
     <collection property="emps" select="EmpMapper.getAllByDid" column="did"/>
 </resultMap>
-<!--
-    resultMap：返回映射唯一id
--->
+        <!--
+            resultMap：返回映射唯一id
+        -->
 <select id="selectAll" resultMap="deptManyOne">
-    select * from dept where did = #{did};
+select * from dept where did = #{did};
 </select>
 ```
 
@@ -481,7 +513,9 @@ class Dept{
 > 动态多条件查询就可以使用以下标签来实现
 
 ## 10.1 if标签
+
 ```xml
+
 <select id="findByCategory" resultType="Category">
     select * from category where 1 = 1
     <if test="name!=null and name!=''">
@@ -498,6 +532,7 @@ class Dept{
 > 当所有条件都不成立时，这时where关键字就多余，可以使用where来解决这一问题
 
 ```xml
+
 <select id="findByCategory" resultType="Category">
     select * from category
     <where>
@@ -520,7 +555,7 @@ class Dept{
     prefix|suffix：将trim标签前|后添加指定内容
     prefixOverrides|suffixOverrides：将trim前后去掉指定内容
 -->
-<trim suffix="" prefix="" suffixOverrides="" prefixOverrides="" />
+<trim suffix="" prefix="" suffixOverrides="" prefixOverrides=""/>
 ```
 
 ```xml
@@ -529,7 +564,7 @@ class Dept{
 -->
 <select id="findByCategory" resultType="Category">
     select * from category
-    <trim  prefix="where" suffixOverrides="and|or">
+    <trim prefix="where" suffixOverrides="and|or">
         <if test="name!=null and name!=''">
             `name` = #{name} and
         </if>
@@ -539,7 +574,6 @@ class Dept{
     </trim>
 </select>
 ```
-
 
 ## 10.4 choose，when，otherwise
 
@@ -589,9 +623,12 @@ class Dept{
 ## 10.6 sql标签
 
 ```xml
+
 <sql id="categoryColumn">id,name,status,sort</sql>
 <select id="findAll" resultType="Category">
-    select <include refid="categoryColumn" /> from category
+select
+<include refid="categoryColumn"/>
+from category
 </select>
 ```
 
@@ -604,6 +641,7 @@ class Dept{
 这是SqlSession层级的缓存默认开启，缓存是在一次sqlSession中存在的。相同SqlSession不同的mapper缓存也是共享的。
 
 **一级缓存失效：**
+
 - 使用不同的SqlSession
 - 两次查询条件不同
 - 两次查询之间进行增删改
@@ -612,6 +650,7 @@ class Dept{
 ## 11.2 二级缓存
 
 开启：
+
 1. 确保cacheEnabled值为true（默认值），在全局设置中设置
 2. 映射文件中添加cache标签
 3. 二级缓存在SqlSession提交或关闭后生效
@@ -620,20 +659,21 @@ class Dept{
 使二级缓存失效的情况：两次查询之间执行了任意的增删改，会使一级和二级缓存同时失效
 
 ## 11.3 二级缓存设置
+
 - 在mapper配置文件中添加的cache标签可以设置一些属性
 - eviction属性：缓存回收策略
-  - LRU（Least Recently Used） – 最近最少使用的：移除最长时间不被使用的对象。
-  - FIFO（First in First out） – 先进先出：按对象进入缓存的顺序来移除它们。
-  - SOFT – 软引用：移除基于垃圾回收器状态和软引用规则的对象。
-  - WEAK – 弱引用：更积极地移除基于垃圾收集器状态和弱引用规则的对象。
-  - 默认的是 LRU
+    - LRU（Least Recently Used） – 最近最少使用的：移除最长时间不被使用的对象。
+    - FIFO（First in First out） – 先进先出：按对象进入缓存的顺序来移除它们。
+    - SOFT – 软引用：移除基于垃圾回收器状态和软引用规则的对象。
+    - WEAK – 弱引用：更积极地移除基于垃圾收集器状态和弱引用规则的对象。
+    - 默认的是 LRU
 - flushInterval属性：刷新间隔，单位毫秒
-  - 默认情况是不设置，也就是没有刷新间隔，缓存仅仅调用语句（增删改）时刷新
+    - 默认情况是不设置，也就是没有刷新间隔，缓存仅仅调用语句（增删改）时刷新
 - size属性：引用数目，正整数
-  - 代表缓存最多可以存储多少个对象，太大容易导致内存溢出
+    - 代表缓存最多可以存储多少个对象，太大容易导致内存溢出
 - readOnly属性：只读，true/false
-  - true：只读缓存；会给所有调用者返回缓存对象的相同实例。因此这些对象不能被修改。这提供了很重要的性能优势。
-  - false：读写缓存；会返回缓存对象的拷贝（通过序列化）。这会慢一些，但是安全，因此默认是false
+    - true：只读缓存；会给所有调用者返回缓存对象的相同实例。因此这些对象不能被修改。这提供了很重要的性能优势。
+    - false：读写缓存；会返回缓存对象的拷贝（通过序列化）。这会慢一些，但是安全，因此默认是false
 
 ## 11.4 MyBatis缓存查询的顺序
 
@@ -645,6 +685,7 @@ class Dept{
 # 12. 分页插件
 
 1. 添加插件
+
 ```xml
 <!--分页插件-->
 <dependency>
@@ -655,6 +696,7 @@ class Dept{
 ```
 
 2. 核心配置文件配置
+
 ```xml
 <!--添加插件-->
 <plugins>
@@ -664,32 +706,34 @@ class Dept{
 ```
 
 3. 3种简单实现
+
 ```java
 @Test
-public void testCategoryPage1() {
-    PageHelper.startPage(1, 3);
-    List<Object> list = sqlSession.selectList("categoryMapper.findAll");
-    System.out.println(list);
-}
+public void testCategoryPage1(){
+        PageHelper.startPage(1,3);
+        List<Object> list=sqlSession.selectList("categoryMapper.findAll");
+        System.out.println(list);
+        }
 
 @Test
-public void testCategoryPage2() {
-    Page<Object> page = PageHelper.startPage(1, 4);
-    List<Object> list = sqlSession.selectList("categoryMapper.findAll");
-    System.out.println(page);
-    System.out.println(list);
-}
+public void testCategoryPage2(){
+        Page<Object> page=PageHelper.startPage(1,4);
+        List<Object> list=sqlSession.selectList("categoryMapper.findAll");
+        System.out.println(page);
+        System.out.println(list);
+        }
 
 @Test
-public void testCategoryPage3() {
-    PageHelper.startPage(1, 4);
-    List<Category> list = sqlSession.selectList("categoryMapper.findAll");
-    PageInfo<Category> page = new PageInfo<>(list, 5);
-    System.out.println(page);
-}
+public void testCategoryPage3(){
+        PageHelper.startPage(1,4);
+        List<Category> list=sqlSession.selectList("categoryMapper.findAll");
+        PageInfo<Category> page=new PageInfo<>(list,5);
+        System.out.println(page);
+        }
 ```
 
 Page和PageInfo相关属性：
+
 - list：分页之后的数据
 - pageNum：当前页的页码
 - pageSize：每页显示的条数
@@ -710,20 +754,21 @@ Page和PageInfo相关属性：
 > 主要的注解`@Select、@Insert、@Delete，@Update`
 
 ## 13.1 简单实用
+
 ```java
 public interface MenuMapper {
-  @Insert("insert into menu(`name`, `icon`, `link`, `parent`, `sort`, `status`) " +
-          "value (#{name}, #{icon}, #{link}, #{parent}, #{sort}, #{status});")
-  int insert(Menu menu);
+    @Insert("insert into menu(`name`, `icon`, `link`, `parent`, `sort`, `status`) " +
+            "value (#{name}, #{icon}, #{link}, #{parent}, #{sort}, #{status});")
+    int insert(Menu menu);
 
-  @Insert("delete from menu where id = #{id}")
-  int delete(@Param("id") long id);
+    @Insert("delete from menu where id = #{id}")
+    int delete(@Param("id") long id);
 
-  @Update("update menu set name = #{name}, icon = #{icon}, link = #{link}, sort = #{sort} where id = #{id}")
-  int update(Menu menu);
+    @Update("update menu set name = #{name}, icon = #{icon}, link = #{link}, sort = #{sort} where id = #{id}")
+    int update(Menu menu);
 
-  @Select("select * from menu where id = #{id}")
-  Menu select(@Param("id") long id);
+    @Select("select * from menu where id = #{id}")
+    Menu select(@Param("id") long id);
 }
 ```
 
@@ -732,51 +777,54 @@ public interface MenuMapper {
 > `@Result`是来替换`<resultMap>`，`@Result`替换标签`<result>`，`@One`替换标签`<association>`，`@Many`替换标签`<collection>`
 
 @Result属性：
+
 - column:数据库列名
 - property：属性名
 - one|many：`@One|@Many`
 
 ### 13.2.1 一对一
+
 ```java
 public interface OrderMapper {
 
-  @Results({
-          @Result(property = "id", column = "id"),
-          @Result(property = "orderTime", column = "orderTime"),
-          @Result(property = "total", column = "total"),
-          @Result(property = "user", column = "uid", javaType = User.class, 
-                  one = @One(select = "UserMapper.findById"))
-  })
-  @Select("select * from order")
-  List<Order> findAll();
+    @Results({
+            @Result(property = "id", column = "id"),
+            @Result(property = "orderTime", column = "orderTime"),
+            @Result(property = "total", column = "total"),
+            @Result(property = "user", column = "uid", javaType = User.class,
+                    one = @One(select = "UserMapper.findById"))
+    })
+    @Select("select * from order")
+    List<Order> findAll();
 }
 
 public interface UserMapper {
-  
-  @Select("select * from user where id = #{id}")
-  List<Order> findById(Integer id);
+
+    @Select("select * from user where id = #{id}")
+    List<Order> findById(Integer id);
 }
 ```
 
 ### 13.2.2 一对多
+
 ```java
 public interface UserMapper {
 
-  @Results({
-          @Result(property = "id", column = "id"),
-          @Result(property = "name", column = "name"),
-          @Result(property = "sex", column = "sex"),
-          @Result(property = "order", column = "id", javaType = List.class,
-                  many = @Many(select = "OrderMapper.findById"))
-  })
-  @Select("select * from order")
-  List<User> findAll();
+    @Results({
+            @Result(property = "id", column = "id"),
+            @Result(property = "name", column = "name"),
+            @Result(property = "sex", column = "sex"),
+            @Result(property = "order", column = "id", javaType = List.class,
+                    many = @Many(select = "OrderMapper.findById"))
+    })
+    @Select("select * from order")
+    List<User> findAll();
 }
 
 public interface OrderMapper {
 
-  @Select("select * from order where id = #{id}")
-  List<Order> findById(Integer id);
+    @Select("select * from order where id = #{id}")
+    List<Order> findById(Integer id);
 }
 ```
 
@@ -785,6 +833,8 @@ public interface OrderMapper {
 > 和一对多很类似，只不过一对多返回的结果是单行数据，多对多返回的是集合。
 
 ## 13.3 注解配置属性
+
+### 13.3.1 插入数据并为插入对象赋值插入结果值
 
 ```java
 public interface UserDao {
