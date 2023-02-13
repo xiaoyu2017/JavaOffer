@@ -121,3 +121,109 @@ redis-server /usr/local/etc/redis/redis.conf
 
 **注意：配置文件中`daemonize no`配置不能改成`yes`，这和docker的`-d`参数冲突会导致redis启动不了**
 
+# 4. RocketMQ
+
+下载镜像：`docker pull apache/rocketmq:4.5.1`
+
+创建网络：`docker network create rocketmq`
+
+创建namesrv容器：
+
+```shell
+docker run -d \
+--name rocketmq-namesrv \
+--network rocketmq \
+-p 9876:9876 \
+-v /Users/yujiangzhong/DockerData/rocketmq/namesrv/logs:/root/logs \
+-v /Users/yujiangzhong/DockerData/rocketmq/namesrv/store:/root/store \
+-e "MAX_POSSIBLE_HEAP=1024" \
+apache/rocketmq:4.5.1 \
+sh mqnamesrv
+```
+
+说明：
+`-e "MAX_POSSIBLE_HEAP=1024"`：设置容器的最大堆内存。
+
+创建配置文件：broker.conf
+
+```conf
+# 所属集群名称，如果节点较多可以配置多个
+brokerClusterName = DefaultCluster
+#broker名称，master和slave使用相同的名称，表明他们的主从关系
+brokerName = broker-a
+#0表示Master，大于0表示不同的slave
+brokerId = 0
+#表示几点做消息删除动作，默认是凌晨4点
+deleteWhen = 04
+#在磁盘上保留消息的时长，单位是小时
+fileReservedTime = 48
+#有三个值：SYNC_MASTER，ASYNC_MASTER，SLAVE；同步和异步表示Master和Slave之间同步数据的机制；
+brokerRole = SYNC_MASTER
+#刷盘策略，取值为：ASYNC_FLUSH，SYNC_FLUSH表示同步刷盘和异步刷盘；SYNC_FLUSH消息写入磁盘后才返回成功状态，ASYNC_FLUSH不需要；
+flushDiskType = SYNC_FLUSH
+# 设置broker节点所在服务器的ip地址（**这个非常重要,主从模式下，从节点会根据主节点的brokerIP2来同步数据，如果不配置，主从无法同步，brokerIP1设置为自己外网能访问的ip，服务器双网卡情况下必须配置，比如阿里云这种，主节点需要配置ip1和ip2，从节点只需要配置ip1即可）
+brokerIP1 = 127.0.0.1
+#nameServer地址，分号分割
+namesrvAddr=127.0.0.1:9876
+#Broker 对外服务的监听端口,
+listenPort = 10911
+#是否允许Broker自动创建Topic
+autoCreateTopicEnable = true
+#是否允许 Broker 自动创建订阅组
+autoCreateSubscriptionGroup = true
+#linux开启epoll
+useEpollNativeSelector = true
+
+#数据存放的根目录
+#storePathRootDir = /root/store/path
+#commit log保存目录
+#storePathCommitLog = /root/store/path/commitlog
+#消费队列存储路径存储路径
+#storePathConsumerQueue = /root/store/path/consumequeue
+
+slaveReadEnable = true
+```
+
+日志文件：
+[logback_broker.xml](./files/logback_broker.xml)
+[logback_namesrv.xml](./files/logback_namesrv.xml)
+[logback_tools.xml](./files/logback_tools.xml)
+
+创建broker容器:
+
+```shell
+docker run -d \
+--name rocketmq-broker-a \
+--network rocketmq \
+-p 10909:10909 \
+-p 10911:10911 \
+-v /Users/yujiangzhong/DockerData/rocketmq/borker/logs:/root/logs \
+-v /Users/yujiangzhong/DockerData/rocketmq/borker/store:/root/store \
+-v /Users/yujiangzhong/DockerData/rocketmq/borker/conf:/home/rocketmq/rocketmq-4.5.1/conf \
+-e "JAVA_OPT_EXT=-server -Xms1g -Xmx1g -Xmn512m" apache/rocketmq:4.5.1 sh mqbroker \
+-c /home/rocketmq/rocketmq-4.5.1/conf/broker.conf
+```
+
+创建控制台：
+
+```shell
+docker run -d \
+--name rocketmq-console \
+--network rocketmq \
+-e "JAVA_OPTS=-Drocketmq.namesrv.addr=rocketmq-namesrv:9876 \
+-Dcom.rocketmq.sendMessageWithVIPChannel=false" \
+-p 8000:8080 apacherocketmq/rocketmq-dashboard:latest
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
