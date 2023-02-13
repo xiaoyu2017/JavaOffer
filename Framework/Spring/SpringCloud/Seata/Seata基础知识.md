@@ -358,9 +358,26 @@ XA模式的缺点是什么？
 
 配置：所有参与分布式事务的服务配置
 
+微服务配置：
+
 ```yaml
+# 略...
 seata:
+  registry: # TC服务注册中心的配置，微服务根据这些信息去注册中心获取tc服务地址
+    type: nacos # 注册中心类型 nacos
+    nacos:
+      server-addr: 127.0.0.1:8848 # nacos地址
+      namespace: "" # namespace，默认为空
+      group: DEFAULT_GROUP # 分组，默认是DEFAULT_GROUP
+      application: seata-server # seata服务名称
+      username: nacos
+      password: nacos
+  tx-service-group: seata-demo # 事务组名称
+  service:
+    vgroup-mapping:
+      seata-demo: SH  # 集群名称
   data-source-proxy-mode: XA
+
 ```
 
 给发起全局事务的入口方法添加@GlobalTransactional注解:
@@ -379,12 +396,48 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @GlobalTransactional  // 全局事务
     public boolean save(OrderUser orderUser) {
-        Order order = new Order();
-        BeanUtils.copyProperties(orderUser, order);
-        User user = orderUser.getUser();
-        orderDao.insert(order);
-        userClient.save(user);
+        try {
+            Order order = new Order();
+            BeanUtils.copyProperties(orderUser, order);
+            User user = orderUser.getUser();
+            orderDao.insert(order);
+            userClient.save(user);
+        } catch (FeignException e) {
+            log.error("下单失败，原因:{}", e.contentUTF8(), e);
+            throw new RuntimeException(e.contentUTF8(), e);
+        }
         return false;
     }
 }
 ```
+
+当所有微服务都正确执行，所有事物才会被提交。当有一个出现异常，所有事物都不能提交。
+
+## 4.2 AT模式
+
+> AT模式同样是分阶段提交的事务模型，不过缺弥补了XA模型中资源锁定周期过长的缺陷。
+
+### 4.2.1 Seata的AT模式
+
+![](../../../../img/seata05.png)
+
+阶段一RM的工作：
+
+- 注册分支事务
+- 记录undo-log（数据快照）
+- 执行业务sql并提交
+- 报告事务状态
+
+阶段二提交时RM的工作：
+
+- 删除undo-log即可
+
+阶段二回滚时RM的工作：
+
+- 根据undo-log恢复数据到更新前
+
+
+
+
+
+
