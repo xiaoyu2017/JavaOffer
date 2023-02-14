@@ -34,6 +34,7 @@
 ## [Gateway](./Framework/Spring/SpringCloud/Gateway)
 ## [Nacos](./Framework/Spring/SpringCloud/Nacos)
 ## [Ribbon](./Framework/Spring/SpringCloud/Ribbon)
+## [Seata](./Framework/Spring/SpringCloud/Seata)
 ## [Sentinel](./Framework/Spring/SpringCloud/Sentinel)
 ## [Vue](./Framework/Vue)
 

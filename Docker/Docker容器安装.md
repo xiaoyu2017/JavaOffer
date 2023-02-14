@@ -215,9 +215,41 @@ docker run -d \
 -p 8000:8080 apacherocketmq/rocketmq-dashboard:latest
 ```
 
+# 5. CentOS7
 
+查看容器ip：`hostname -i`
 
+创建指定ip段网络：`docker network create --subnet=172.12.4.0/16 CentosNetwork`
 
+创建centos7并指定ip：
+
+```shell
+docker run -itd \
+--name centos-master \
+--net CentosNetwork \
+--ip 172.12.4.0 centos:centos7
+```
+
+```shell
+docker run -itd \
+--name centos-slave1 \
+--net CentosNetwork \
+--ip 172.12.4.1 centos:centos7
+```
+
+```shell
+docker run -itd \
+--name centos-slave2 \
+--net CentosNetwork \
+--ip 172.12.4.2 centos:centos7
+```
+
+```shell
+docker run -itd \
+--name centos-slave3 \
+--net CentosNetwork \
+--ip 172.12.4.3 centos:centos7
+```
 
 
 
