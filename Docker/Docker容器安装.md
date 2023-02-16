@@ -215,7 +215,7 @@ docker run -d \
 -p 8000:8080 apacherocketmq/rocketmq-dashboard:latest
 ```
 
-# 5. CentOS7
+# 5. CentOS7(固定IP)
 
 查看容器ip：`hostname -i`
 
@@ -251,9 +251,45 @@ docker run -itd \
 --ip 172.12.4.3 centos:centos7
 ```
 
+# 6. Redis主从集群
 
+下载镜像：`docker pull redis:latest` 或 `docker pull redis:7.0`
 
+创建网络：`docker network create --subnet=172.13.4.0/16 RedisMSNetwork`
 
+创建容器：
+
+```shell
+docker run \
+--name redis7MS0 \
+--net RedisMSNetwork \
+--ip 172.13.4.0 \
+-v /Users/yujiangzhong/DockerData/redis/RedisMasterSlave/redis0/conf:/usr/local/etc/redis \
+-v /Users/yujiangzhong/DockerData/redis/RedisMasterSlave/redis0/data:/data \
+-p 13400:6379 \
+-d redis:7.0 \
+redis-server /usr/local/etc/redis/redis.conf
+
+docker run \
+--name redis7MS1 \
+--net RedisMSNetwork \
+--ip 172.13.4.1 \
+-v /Users/yujiangzhong/DockerData/redis/RedisMasterSlave/redis1/conf:/usr/local/etc/redis \
+-v /Users/yujiangzhong/DockerData/redis/RedisMasterSlave/redis1/data:/data \
+-p 13401:6379 \
+-d redis:7.0 \
+redis-server /usr/local/etc/redis/redis.conf
+
+docker run \
+--name redis7MS2 \
+--net RedisMSNetwork \
+--ip 172.13.4.2 \
+-v /Users/yujiangzhong/DockerData/redis/RedisMasterSlave/redis2/conf:/usr/local/etc/redis \
+-v /Users/yujiangzhong/DockerData/redis/RedisMasterSlave/redis2/data:/data \
+-p 13402:6379 \
+-d redis:7.0 \
+redis-server /usr/local/etc/redis/redis.conf
+```
 
 
 
