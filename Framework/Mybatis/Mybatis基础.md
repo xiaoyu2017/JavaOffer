@@ -241,7 +241,7 @@ where name like "%"#{name}"%";
 
 > 使用in，将条件拼接后当参数传递sql中执行
 
-`int deletes(@Param("ides")String ids)`
+`int deletes(@Param("ids")String ids)`
 
 ```sql
 select *

@@ -134,4 +134,6 @@ public class SpringEventTest {
 SpringMVC，SpringAOP使用适配器模式。
 
 # 装饰者模式
+作用：可以在不改变原有对象的情况下拓展其功能。
+
 jdk中的IO，Spring中的DataSource

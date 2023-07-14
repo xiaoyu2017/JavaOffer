@@ -1,6 +1,8 @@
 # 1. Ribbon概述
 
-> Ribbon主要负责赋值均衡，那么RestTemplate是如何远程调用，如何赋值均衡的了。
+> Ribbon主要负责赋值均衡，那么RestTemplate是如何远程调用，如何负载均衡的了。
+
+> 远程调用主要代码：`restTemplate.getForObject("http://topics/category/name/1", String.class);`
 
 ![](../../../../img/cloud1.png)
 
