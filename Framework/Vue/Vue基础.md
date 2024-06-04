@@ -1,4 +1,4 @@
-# 模板绑定
+# 一、模板绑定
 ## 模板语法
 1. 插值语法{{XXX}}
 
@@ -12,7 +12,7 @@
 1. 单向绑定
 
    数据只能从data流向页面，v-bind:href ="xxx" 或简写为 :href。
-    
+   
 2. 双向绑定
 
     数据双向流动，v-mode:value="xxx" 或简写为 v-model="xxx"。
@@ -21,7 +21,7 @@
 
 ![](../../img/mvvm.png)
 
-# 事件处理
+# 二、事件处理
 
 ## 绑定事件
 语法：v-on:xxx，@xxx='functionName'，@xxx='functionName($event)'，xxx为事件名称。
@@ -79,7 +79,7 @@
 </script>
 ```
 
-# 计算属性
+# 三、计算属性
 computed：数据不存在，需要计算才得来，可以使用数据绑定显示。
 ```js
 // 用法
@@ -114,7 +114,7 @@ const vm = new Vue({
 })
 ```
 
-# 属性监视
+# 四、属性监视
 > 监视属性的变化，默认监视层级为一层，内部改变不会触发。可以通过配置deep:true可以监测对象内部值改变（多层），也可以单独监视内部属性。
 
 computed和watch之间的区别：
@@ -174,7 +174,7 @@ computed和watch之间的区别：
 </script>
 ```
 
-# 样式绑定
+# 五、样式绑定
 class样式：
    语法： :class='XXX' XXX可以是字符串、对象、数组
 
@@ -238,7 +238,7 @@ style样式：
 </script>
 ```
 
-# 结构语句
+# 六、结构语句
 
 ## 条件语句
 1. v-if
@@ -256,7 +256,7 @@ style样式：
 1. v-for
 语法：`<li v-for='(p, index) in person' :key='index' />`
 
-# 过滤器
+# 七、过滤器
 > 对要显示的数据进行格式化渲染。
 
 语法：
@@ -339,3 +339,154 @@ new Vue({
    <hello></hello>
 </div>
 ```
+
+
+
+# 组件数据共享
+
+## 1.父子数据共享
+
+> 需要子组件用props自定义属性。
+
+```vue
+<!--父组件 Avue.vue-->
+<script>
+export default {
+  components: {
+    Bvue
+  },
+  data() {
+    return {
+      msg: 'Hello child!',
+      info: {name:'admin', age:18}
+    }
+  },
+}
+</script>
+
+<template>
+<Bvue :msg="msg" :info="info"/>
+</template>
+
+<!--子组件 Bvue.vue-->
+<script>
+export default {
+  data() {
+    return {
+     
+    }
+  },
+  props: ['msg', 'info']
+}
+</script>
+
+<template>
+	<div>
+	  <p>{{ msg }}</p>
+ 	  <p>{{ info }}</p>
+  </div>
+</template>
+```
+
+
+
+## 2.子父数据共享
+
+```vue
+<!--父组件 Avue.vue-->
+<script>
+export default {
+  components: {
+    Bvue
+  },
+  data() {
+    return {
+      msg: ''
+    }
+  },
+  methods:{
+    setMesg(vul){
+      this.msg = vul
+    }
+  }
+}
+</script>
+
+<template>
+	<Bvue @setMsg='setMsg'/>
+</template>
+
+<!--子组件 Bvue.vue-->
+<script>
+export default {
+  data() {
+    return {
+     msgData: 'Hello Prent!'
+    }
+  },
+  methods:{
+    addMsg(){
+      this.#emit('setMsg', this.msgData)
+    }
+  }
+}
+</script>
+
+<template>
+</template>
+```
+
+
+
+## 3.兄弟间传值
+
+```vue
+<!--组件 Avue.vue-->
+<script>
+import bus from "./EventBus.js"
+  
+export default {
+  data() {
+    return {
+      msg: ''
+    }
+  },
+  methods:{
+    setMesg(vul){
+      this.msg = this.$on('sendMsg', vul => {
+        this.msg = vul
+      })
+    }
+  }
+}
+</script>
+
+<!--组件 Bvue.vue-->
+<script>
+import bus from "./EventBus.js"
+  
+export default {
+  data() {
+    return {
+     msgData: 'Hello Prent!'
+    }
+  },
+  methods:{
+    addMsg(){
+      this.#emit('sendMsg', this.msgData)
+    }
+  }
+}
+</script>
+
+```
+
+
+
+```javascript
+<!--EventBus.js-->
+import Vue from 'vue'
+// 向外共享 Vue 的实例对象
+export default new Vue()
+```
+
