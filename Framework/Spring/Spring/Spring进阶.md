@@ -170,7 +170,7 @@ public class Compoent2 {
 }
 ```
 
-# 2. 容器实现
+# 2. Bean声明周期
 
 
 
