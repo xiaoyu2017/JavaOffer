@@ -263,7 +263,7 @@ style样式：
    - 注册：`Vue.filter(name,callback)` 或 `new Vue{filters:{}}`
    - 使用：`{{ xxx | 过滤器名}}`  或  `v-bind:属性 = "xxx | 过滤器名"` 或  `v-bind:属性 = "xxx | 过滤器名1| 过滤器名2"`
 
-# 常用指令
+# 八、常用指令
 1. v-text : 更新元素的 textContent
 2. v-html : 更新元素的 innerHTML
 3. v-if : 如果为 true, 当前标签才会输出到页面
@@ -275,19 +275,19 @@ style样式：
 9. v-model : 双向数据绑定
 10. v-cloak : 防止闪现, 与 css 配合: [v-cloak] { display: none }
 
-# 自定义指令
+# 九、自定义指令
 ```js
 Vue.directive('my-directive', function(el, binding){ el.innerHTML = binding.value.toupperCase() })
 // 使用
 v-my-directive='xxx'
 ```
 
-# 生命周期
+# 十、生命周期
 常用生命周期方法：mounted，beforeDestory
 
-![](../../img/lifecycle.png)
+<img src="../../img/lifecycle.png" style="zoom:40%;" />
 
-# 模块组件化
+# 十一、模块组件化
 使用组件三大步骤：定义组件，注册组件，使用组件
 1. 定义组件
 ```js
@@ -342,7 +342,7 @@ new Vue({
 
 
 
-# 组件数据共享
+# 十二、组件数据共享
 
 ## 1.父子数据共享
 
@@ -426,7 +426,7 @@ export default {
   },
   methods:{
     addMsg(){
-      this.#emit('setMsg', this.msgData)
+      this.$emit('setMsg', this.msgData)
     }
   }
 }
@@ -443,40 +443,40 @@ export default {
 ```vue
 <!--组件 Avue.vue-->
 <script>
-import bus from "./EventBus.js"
-  
-export default {
-  data() {
-    return {
-      msg: ''
-    }
-  },
-  methods:{
-    setMesg(vul){
-      this.msg = this.$on('sendMsg', vul => {
-        this.msg = vul
-      })
+  import bus from "./EventBus.js"
+
+  export default {
+    data() {
+      return {
+        msg: ''
+      }
+    },
+    methods: {
+      setMesg(vul) {
+        // 监听事件，被触发事件
+        this.msg = this.$on('sendMsg', vul => {
+          this.msg = vul
+        })
+      }
     }
   }
-}
 </script>
 
 <!--组件 Bvue.vue-->
 <script>
-import bus from "./EventBus.js"
-  
-export default {
-  data() {
-    return {
-     msgData: 'Hello Prent!'
-    }
-  },
-  methods:{
-    addMsg(){
-      this.#emit('sendMsg', this.msgData)
+  import bus from "./EventBus.js"
+
+  export default {
+    created(){
+        // 发送数据触发事件
+        this.$emit('sendMsg', this.msgData)
+    },
+    data() {
+      return {
+        msgData: 'Hello Prent!'
+      }
     }
   }
-}
 </script>
 
 ```
@@ -489,4 +489,12 @@ import Vue from 'vue'
 // 向外共享 Vue 的实例对象
 export default new Vue()
 ```
+
+> 也可以使用PubSub.js代替这种方法
+
+
+
+## 4.ref
+
+
 
