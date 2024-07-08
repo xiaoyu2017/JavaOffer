@@ -64,7 +64,7 @@ synchronized或者lock：对即将修改的数据进行加锁，同一时刻只�
 - WAITING：等待状态，表示该线程需要等待其他线程做出一些特定动作（通知或中断）。
 - TIME_WAITING：超时等待状态，可以在指定的时间后自行返回而不是像 WAITING 那样一直等待。
 - TERMINATED：终止状态，表示该线程已经运行完毕。
-  ![](../img/thread-status.png)
+  ![](../../img/thread-status.png)
 
 ## 线程池
 ### 是什么
@@ -127,7 +127,7 @@ JDK1.6 对锁的实现引入了大量的优化，如偏向锁、轻量级锁、�
 重量级锁：类似悲观锁，未获得锁线程被挂起，进入系统排队系统等待竞争。
 
 ### 过程
-![](../img/synchronized升级锁.png)
+![](../../img/synchronized升级锁.png)
 
 ## synchronized修饰构造方法
 构造方法不能使用synchronized关键字。构造方法本身就是同步方法，不需要同步修饰符。
